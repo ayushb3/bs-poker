@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.playwright-cli/
+redesign-*.png
+.DS_Store
