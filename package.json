@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sim": "vitest run src/cpu/strength.test.ts --silent=false"
   },
   "devDependencies": {
     "typescript": "5.9.3",

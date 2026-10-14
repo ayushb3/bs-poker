@@ -1,19 +1,33 @@
 /**
- * PLACEHOLDER CPU — replaced in M1 by the real easy/medium/hard bots.
- * Calls BS 30% of the time (never when opening), otherwise takes the lowest legal raise.
+ * CPU players (SPEC "Engine → CPU").
+ *
+ *   easy    static table of P(bid exists | pool size, category); ignores its hand; noisy.
+ *   medium  Monte Carlo conditioned on its own hand.
+ *   hard    also treats earlier bids by other players as weak evidence about their hands,
+ *           calls BS more sharply and bluffs less (and on ranks it holds).
+ *
+ * `cpuDecide` is a pure function of the context: the only randomness is `ctx.rng`.
  */
+import { decide } from "./decide";
+import { easyModel, hardModel, mediumModel, type BeliefModel } from "./models";
+import { CPU_PARAMS, type CpuParams } from "./params";
 import type { CpuContext, CpuDecision, Difficulty } from "./types";
 
 export * from "./types";
+export { CPU_PARAMS, type CpuParams } from "./params";
+export { tableProbability } from "./table";
 
-export function cpuDecide(ctx: CpuContext, _difficulty: Difficulty): CpuDecision {
-  const canCall = ctx.bids.length > 0;
-  if (canCall && ctx.rng() < 0.3) {
-    return { action: { type: "callBS" }, pCurrentExists: 0.5, pMyBidExists: null, bluffing: false };
-  }
-  const bid = ctx.legalBids[0];
-  if (!bid) {
-    return { action: { type: "callBS" }, pCurrentExists: 0.5, pMyBidExists: null, bluffing: false };
-  }
-  return { action: { type: "bid", bid }, pCurrentExists: canCall ? 0.5 : null, pMyBidExists: 0.5, bluffing: false };
+const MODELS: Readonly<Record<Difficulty, (ctx: CpuContext, params: CpuParams) => BeliefModel>> = {
+  easy: easyModel,
+  medium: mediumModel,
+  hard: hardModel,
+};
+
+/** Decide with an explicit parameter set (used by the tuning simulations). */
+export function cpuDecideWith(ctx: CpuContext, difficulty: Difficulty, params: CpuParams): CpuDecision {
+  return decide(ctx, params, MODELS[difficulty](ctx, params));
+}
+
+export function cpuDecide(ctx: CpuContext, difficulty: Difficulty): CpuDecision {
+  return cpuDecideWith(ctx, difficulty, CPU_PARAMS[difficulty]);
 }
