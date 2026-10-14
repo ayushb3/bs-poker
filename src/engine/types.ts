@@ -95,7 +95,7 @@ export interface PlayerState {
   /** How many cards this player is dealt each round (grows by 1 per lost round). */
   readonly cardCount: number;
   readonly eliminated: boolean;
-  /** Current round's hand (empty when eliminated). */
+  /** Current round's hand. An eliminated player keeps it through the reveal; it is empty from the next deal on. */
   readonly hand: readonly Card[];
 }
 

@@ -136,7 +136,8 @@ function applyCallBS(state: GameState): GameState {
     const cardCount = p.cardCount + 1;
     if (cardCount >= state.config.cardCap) {
       eliminated.push(p.id);
-      return { ...p, cardCount, eliminated: true, hand: [] };
+      // The hand stays visible during the reveal; nextRound() deals it away.
+      return { ...p, cardCount, eliminated: true };
     }
     return { ...p, cardCount };
   });

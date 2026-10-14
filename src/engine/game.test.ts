@@ -190,7 +190,7 @@ describe("rounds and elimination", () => {
     expect(new Set(poolOf(n).map((c) => c.id)).size).toBe(9);
   });
 
-  it("eliminates a player who reaches the cap, empties their hand, and skips them in rotation", () => {
+  it("eliminates a player who reaches the cap, keeps their hand for the reveal, and skips them in rotation", () => {
     // 3 players, cap 4, starting 3: one lost round eliminates.
     let s = game({ playerCount: 3, cardCap: 4, startingCards: 3 }, mulberry32(10));
     const victim = s.starter;
@@ -200,7 +200,8 @@ describe("rounds and elimination", () => {
     expect(s.lastResult?.eliminated).toEqual([victim]);
     expect(s.players[victim]?.eliminated).toBe(true);
     expect(s.players[victim]?.cardCount).toBe(4);
-    expect(s.players[victim]?.hand).toEqual([]);
+    // Still face-up for the reveal screen; emptied once the next round is dealt.
+    expect(s.players[victim]?.hand.length).toBe(3);
     expect(activePlayers(s)).toEqual([0, 1, 2].filter((id) => id !== victim));
     // The pool at reveal still shows the eliminated player's cards.
     expect(s.lastResult?.pool.length).toBe(9);
