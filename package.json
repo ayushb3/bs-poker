@@ -1,0 +1,20 @@
+{
+  "name": "bs-poker",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "description": "BS Poker — a bluffing/poker hybrid card game invented by Samarth. Play against CPU bots in the browser.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "vite": "7.3.7",
+    "vitest": "4.1.11"
+  }
+}

@@ -3,3 +3,6 @@ __pycache__/
 .playwright-cli/
 redesign-*.png
 .DS_Store
+node_modules/
+dist/
+*.tsbuildinfo
