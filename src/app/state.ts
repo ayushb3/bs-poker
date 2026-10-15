@@ -19,6 +19,13 @@ export const MAX_BOTS = 5;
 export const MIN_CAP = 4;
 export const MAX_CAP = 8;
 
+
+/** Compact one-liner for the game header: "3 bots · Medium · cap 6". */
+export function settingsSummary(s: Settings): string {
+  const diff = s.difficulty[0]!.toUpperCase() + s.difficulty.slice(1);
+  return `${s.bots} bot${s.bots === 1 ? "" : "s"} · ${diff} · cap ${s.cardCap}`;
+}
+
 /** Who sits where. Seat 0 is always the human. */
 export interface Seat {
   readonly id: number;
@@ -48,10 +55,18 @@ export interface LogEntry {
   readonly kind: "bid" | "bs" | "result" | "info";
 }
 
+/** Who opens the current round and why (shown once per round while no bid is on the table). */
+export interface Opener {
+  readonly seat: number;
+  readonly reason: "random" | "lost" | "nextAfterOut";
+}
+
 export interface AppState {
   readonly screen: Screen;
   readonly settings: Settings;
   readonly showHelp: boolean;
+  /** The in-game Quit button was tapped and awaits Yes/No. */
+  readonly confirmQuit: boolean;
   readonly game: GameState | null;
   readonly seats: readonly Seat[];
   readonly picker: PickerState;
@@ -62,12 +77,14 @@ export interface AppState {
   readonly log: readonly LogEntry[];
   /** Pre-reveal odds text for the bid that was called, set when BS is called. */
   readonly oddsLine: string | null;
+  readonly opener: Opener | null;
 }
 
 export const INITIAL_STATE: AppState = {
   screen: "title",
   settings: DEFAULT_SETTINGS,
   showHelp: false,
+  confirmQuit: false,
   game: null,
   seats: [],
   picker: EMPTY_PICKER,
@@ -75,4 +92,5 @@ export const INITIAL_STATE: AppState = {
   flash: null,
   log: [],
   oddsLine: null,
+  opener: null,
 };

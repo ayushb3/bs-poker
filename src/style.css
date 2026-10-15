@@ -299,6 +299,23 @@ h1, h2, h3 { margin: 0; }
   justify-self: start;
 }
 .game-header .ghost.small { justify-self: end; min-width: var(--touch); padding: 6px 8px; }
+.settings-summary { margin-top: 3px; font-size: 11px; letter-spacing: 1px; color: var(--cream); opacity: 0.7; }
+.quit-confirm {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1.5px solid var(--bs-red);
+}
+.quit-q { font-weight: 700; letter-spacing: 1px; margin-right: 4px; }
+.quit-confirm button.small { min-height: 36px; }
+.quit-confirm button.bs.small { font-size: 12px; padding: 6px 14px; letter-spacing: 1px; }
+
 
 .table-area {
   position: relative;
@@ -483,6 +500,12 @@ h1, h2, h3 { margin: 0; }
   border: 1.5px solid var(--gold-soft);
 }
 .player .label b { color: var(--gold); font-size: 15px; }
+.player .label.your-turn b { animation: seatPulse 1.4s ease-in-out infinite; }
+@keyframes seatPulse {
+  0%, 100% { text-shadow: 0 0 0 rgba(212, 175, 55, 0); }
+  50% { text-shadow: 0 0 10px rgba(212, 175, 55, 0.95), 0 0 2px var(--gold); }
+}
+.opener-hint { color: var(--gold); }
 .player .label .count { font-size: 12px; color: var(--gold-soft); letter-spacing: 1px; }
 .hand { display: flex; gap: 6px; perspective: 800px; min-height: 100px; justify-content: center; }
 
