@@ -1,4 +1,11 @@
-// Placeholder entry point for the M0 engine milestone. M1 replaces this with the UI.
-import { allBids } from "./engine";
+import "./style.css";
+import { createApp } from "./app/controller";
+import { mountRenderer } from "./ui/render";
+import { startEmbers } from "./ui/particles";
 
-console.log(`BS Poker engine loaded: ${allBids().length} legal bids`);
+const root = document.getElementById("app");
+if (!root) throw new Error("#app root missing");
+
+const app = createApp();
+mountRenderer(root, app);
+startEmbers(document.getElementById("embers"));
