@@ -3,11 +3,13 @@
  * CPU turns, and notifies the renderer. No DOM in here.
  */
 import type { Bid, Category, GameState, Rank, Rng, Suit } from "../engine";
-import { applyAction, bidLabel, legalActions, newGame, nextRound, poolOf } from "../engine";
+import { applyAction, bidLabel, bidOdds, legalActions, newGame, nextRound, poolOf } from "../engine";
 import type { CpuContext, CpuDecision } from "../cpu";
 import { cpuDecide } from "../cpu";
 import type { AppState, LogEntry, Seat, Settings } from "./state";
-import { EMPTY_PICKER, INITIAL_STATE, MAX_BOTS, MAX_CAP, MIN_BOTS, MIN_CAP } from "./state";
+import { EMPTY_PICKER, INITIAL_STATE } from "./state";
+import { validateSettings } from "./settings";
+import { oddsLine } from "./reveal";
 import { makeSeats } from "./roster";
 import * as picker from "./picker";
 
@@ -29,7 +31,8 @@ export interface Actions {
   setSettings(patch: Partial<Settings>): void;
   toggleHelp(show?: boolean): void;
   startGame(): void;
-  playAgain(): void;
+  /** Start a new game with the same settings and opponents. */
+  rematch(): void;
   changeSettings(): void;
   pickCategory(category: Category): void;
   pickRank(rank: Rank): void;
@@ -152,7 +155,7 @@ export function createApp(rng: Rng = Math.random): App {
         entries.push({ round: next.round, kind: "info", text: `${seatName(e)} is out.` });
       }
     }
-    set({ game: next, thinking: null, flash: text, log: entries });
+    set({ game: next, thinking: null, flash: text, log: entries, oddsLine: r ? oddsLine(bidOdds(r.bid, r.pool.length)) : null });
     flashTimer = setTimeout(() => {
       flashTimer = null;
       set({ flash: null, screen: "reveal" });
@@ -163,16 +166,13 @@ export function createApp(rng: Rng = Math.random): App {
     clearTimers();
     const { bots, cardCap } = state.settings;
     const game = newGame({ playerCount: bots + 1, cardCap }, rng);
-    state = { ...state, seats, log: [], flash: null, showHelp: false };
+    state = { ...state, seats, log: [], flash: null, showHelp: false, oddsLine: null, picker: EMPTY_PICKER };
     afterChange(game, { screen: "game" });
   }
 
   const actions: Actions = {
     setSettings(patch) {
-      const s = { ...state.settings, ...patch };
-      s.bots = Math.min(MAX_BOTS, Math.max(MIN_BOTS, Math.round(s.bots)));
-      s.cardCap = Math.min(MAX_CAP, Math.max(MIN_CAP, Math.round(s.cardCap)));
-      set({ settings: s });
+      set({ settings: validateSettings(state.settings, patch) });
     },
     toggleHelp(show) {
       set({ showHelp: show ?? !state.showHelp });
@@ -180,7 +180,7 @@ export function createApp(rng: Rng = Math.random): App {
     startGame() {
       begin(makeSeats(state.settings.bots, rng));
     },
-    playAgain() {
+    rematch() {
       const seats = state.seats.length === state.settings.bots + 1 ? state.seats : makeSeats(state.settings.bots, rng);
       begin(seats);
     },

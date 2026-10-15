@@ -3,6 +3,7 @@ import type { GameState } from "../engine";
 import type { Actions } from "../app/controller";
 import { HUMAN } from "../app/controller";
 import type { AppState } from "../app/state";
+import { standings as rankPlayers } from "../app/reveal";
 import { avatarEl } from "./avatars";
 import { h, button } from "./dom";
 
@@ -10,7 +11,7 @@ export function overScreen(state: AppState, game: GameState, actions: Actions): 
   const winner = game.winner;
   const wseat = winner == null ? null : state.seats[winner];
   const youWon = winner === HUMAN;
-  const standings = [...game.players].sort((a, b) => Number(a.eliminated) - Number(b.eliminated) || a.cardCount - b.cardCount);
+  const standings = rankPlayers(game);
   return h(
     "main",
     { class: "screen over" },
@@ -43,7 +44,7 @@ export function overScreen(state: AppState, game: GameState, actions: Actions): 
       h(
         "div",
         { class: "over-actions" },
-        button("Play again", () => actions.playAgain(), { class: "confirm big", key: "again" }),
+        button("Rematch", () => actions.rematch(), { class: "confirm big", key: "again" }),
         button("Change settings", () => actions.changeSettings(), { class: "ghost", key: "settings" }),
       ),
     ),
