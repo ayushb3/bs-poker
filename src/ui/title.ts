@@ -40,7 +40,8 @@ export function titleScreen(state: AppState, actions: Actions): HTMLElement {
       "div",
       { class: "title-card" },
       h("h1", { class: "logo" }, "BS Poker"),
-      h("p", { class: "credit" }, "BS Poker, a game by ", h("b", null, "Samarth"), "."),
+      h("p", { class: "credit" }, h("span", { class: "credit-by" }, "Invented by"), " ", h("b", { class: "credit-name" }, "Samarth")),
+      h("p", { class: "tagline" }, "A bluffing card game"),
       h(
         "div",
         { class: "settings" },
@@ -73,5 +74,6 @@ export function titleScreen(state: AppState, actions: Actions): HTMLElement {
         button("How to play", () => actions.toggleHelp(true), { class: "ghost", key: "how" }),
       ),
     ),
+    h("footer", { class: "title-foot" }, "Rules v0.3 · decided by simulation"),
   );
 }

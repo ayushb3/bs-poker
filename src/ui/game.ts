@@ -3,7 +3,8 @@ import type { GameState } from "../engine";
 import { bidLabel, poolOf } from "../engine";
 import type { Actions } from "../app/controller";
 import { HUMAN } from "../app/controller";
-import type { AppState, Seat } from "../app/state";
+import type { AppState, Opener, Seat } from "../app/state";
+import { settingsSummary } from "../app/state";
 import { avatarEl } from "./avatars";
 import { cardEl, miniCards } from "./cards";
 import { h, button } from "./dom";
@@ -80,13 +81,28 @@ function turnInfo(state: AppState, game: GameState): HTMLElement {
   return h("div", { class: "turn-info" }, `${name} is thinking…`);
 }
 
+/** "Vega lost, so Vega opens" / "you lost, so you open" / "Vega opens" — shown while the round has no bid yet. */
+function openerHint(state: AppState, game: GameState, opener: Opener | null): string | null {
+  if (!opener || game.phase !== "bidding") return null;
+  const you = opener.seat === HUMAN;
+  const name = you ? "you" : (state.seats[opener.seat]?.name ?? "?");
+  const opens = you ? "open" : "opens";
+  return opener.reason === "lost" ? `${name} lost, so ${name} ${opens}` : `${name} ${opens}`;
+}
+
 function historyStrip(state: AppState, game: GameState): HTMLElement {
   const recent = game.bids.slice(-5);
+  const hint = openerHint(state, game, state.opener);
   return h(
     "div",
     { class: "history", "aria-label": "Recent bids" },
     recent.length === 0
-      ? h("span", { class: "hist-empty" }, `Round ${game.round} · ${poolOf(game).length} cards in the pool`)
+      ? h(
+          "span",
+          { class: "hist-empty" },
+          `Round ${game.round} · ${poolOf(game).length} cards in the pool`,
+          hint ? h("span", { class: "opener-hint" }, ` · ${hint}`) : null,
+        )
       : recent.map((r, i) =>
           h(
             "span",
@@ -150,8 +166,29 @@ export function gameScreen(state: AppState, game: GameState, actions: Actions): 
       "header",
       { class: "game-header" },
       button("?", () => actions.toggleHelp(true), { class: "help-btn", key: "help", ariaLabel: "How to play" }),
-      h("div", { class: "title-small" }, h("h1", null, "BS Poker"), h("div", { class: "sub" }, `Round ${game.round} · ${pool} cards in play`)),
-      button("Quit", () => actions.changeSettings(), { class: "ghost small", key: "quit", ariaLabel: "Quit to title" }),
+      h(
+        "div",
+        { class: "title-small" },
+        h("h1", null, "BS Poker"),
+        h("div", { class: "sub" }, `Round ${game.round} · ${pool} cards in play`),
+        h("div", { class: "settings-summary", title: "Settings for this game" }, settingsSummary(state.settings)),
+      ),
+      button("Quit", () => actions.confirmQuit(true), {
+        class: `ghost small${state.confirmQuit ? " selected" : ""}`,
+        key: "quit",
+        ariaLabel: "Quit game",
+        pressed: state.confirmQuit,
+      }),
+      state.confirmQuit
+        ? h(
+            "div",
+            { class: "quit-confirm", role: "group", "aria-label": "Quit game?" },
+            h("span", { class: "quit-q" }, "Quit game?"),
+            button("Yes", () => actions.changeSettings(), { class: "bs small", key: "quit-yes" }),
+            button("No", () => actions.confirmQuit(false), { class: "small", key: "quit-no" }),
+            button("Change settings", () => actions.changeSettings(), { class: "ghost small", key: "quit-settings" }),
+          )
+        : null,
     ),
     h(
       "div",
@@ -167,7 +204,7 @@ export function gameScreen(state: AppState, game: GameState, actions: Actions): 
         { class: "player" },
         h(
           "div",
-          { class: "label" },
+          { class: `label${game.phase === "bidding" && game.turn === HUMAN ? " your-turn" : ""}` },
           avatarEl(state.seats[HUMAN] ?? { id: 0, name: "You", critter: "😎", hue: 46, human: true }, "sm"),
           h("b", null, "You"),
           h("span", { class: "count" }, `${me?.cardCount ?? 0} card${me?.cardCount === 1 ? "" : "s"}`),

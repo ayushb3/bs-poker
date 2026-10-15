@@ -3,15 +3,16 @@
  * CPU turns, and notifies the renderer. No DOM in here.
  */
 import type { Bid, Category, GameState, Rank, Rng, Suit } from "../engine";
-import { applyAction, bidLabel, bidOdds, legalActions, newGame, nextRound, poolOf } from "../engine";
+import { applyAction, bidLabel, legalActions, newGame, nextRound, poolOf } from "../engine";
 import type { CpuContext, CpuDecision } from "../cpu";
 import { cpuDecide } from "../cpu";
-import type { AppState, LogEntry, Seat, Settings } from "./state";
+import type { AppState, LogEntry, Opener, Seat, Settings } from "./state";
 import { EMPTY_PICKER, INITIAL_STATE } from "./state";
 import { validateSettings } from "./settings";
-import { oddsLine } from "./reveal";
 import { makeSeats } from "./roster";
 import * as picker from "./picker";
+import { computeRevealOdds } from "./odds";
+import { NO_STORE, type SettingsStore } from "./persist";
 
 export const HUMAN = 0;
 
@@ -34,6 +35,8 @@ export interface Actions {
   /** Start a new game with the same settings and opponents. */
   rematch(): void;
   changeSettings(): void;
+  /** Show (true) or hide (false) the inline "Quit game?" confirm on the game screen. */
+  confirmQuit(show: boolean): void;
   pickCategory(category: Category): void;
   pickRank(rank: Rank): void;
   pickRank2(rank2: Rank): void;
@@ -44,8 +47,8 @@ export interface Actions {
   nextRound(): void;
 }
 
-export function createApp(rng: Rng = Math.random): App {
-  let state: AppState = INITIAL_STATE;
+export function createApp(rng: Rng = Math.random, store: SettingsStore = NO_STORE): App {
+  let state: AppState = { ...INITIAL_STATE, settings: { ...INITIAL_STATE.settings, ...(store.load() ?? {}) } };
   const listeners = new Set<(s: AppState) => void>();
   let thinkTimer: ReturnType<typeof setTimeout> | null = null;
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -155,7 +158,9 @@ export function createApp(rng: Rng = Math.random): App {
         entries.push({ round: next.round, kind: "info", text: `${seatName(e)} is out.` });
       }
     }
-    set({ game: next, thinking: null, flash: text, log: entries, oddsLine: r ? oddsLine(bidOdds(r.bid, r.pool.length)) : null });
+    // Odds are computed exactly once per reveal, here, so re-renders never resample.
+    const odds = computeRevealOdds(next, r && r.bidder !== HUMAN ? seatName(r.bidder) : null);
+    set({ game: next, thinking: null, flash: text, log: entries, odds, confirmQuit: false });
     flashTimer = setTimeout(() => {
       flashTimer = null;
       set({ flash: null, screen: "reveal" });
@@ -166,13 +171,16 @@ export function createApp(rng: Rng = Math.random): App {
     clearTimers();
     const { bots, cardCap } = state.settings;
     const game = newGame({ playerCount: bots + 1, cardCap }, rng);
-    state = { ...state, seats, log: [], flash: null, showHelp: false, oddsLine: null, picker: EMPTY_PICKER };
-    afterChange(game, { screen: "game" });
+    state = { ...state, seats, log: [], flash: null, showHelp: false, odds: null, confirmQuit: false, picker: EMPTY_PICKER };
+    const opener: Opener = { seat: game.turn, reason: "random" };
+    afterChange(game, { screen: "game", opener });
   }
 
   const actions: Actions = {
     setSettings(patch) {
-      set({ settings: validateSettings(state.settings, patch) });
+      const s: Settings = validateSettings(state.settings, patch);
+      set({ settings: s });
+      store.save(s);
     },
     toggleHelp(show) {
       set({ showHelp: show ?? !state.showHelp });
@@ -186,7 +194,11 @@ export function createApp(rng: Rng = Math.random): App {
     },
     changeSettings() {
       clearTimers();
-      set({ screen: "title", game: null, flash: null, thinking: null });
+      set({ screen: "title", game: null, flash: null, thinking: null, confirmQuit: false, odds: null, opener: null });
+    },
+    confirmQuit(show) {
+      if (state.screen !== "game") return;
+      set({ confirmQuit: show });
     },
     pickCategory(category) {
       const g = state.game;
@@ -233,8 +245,10 @@ export function createApp(rng: Rng = Math.random): App {
         return;
       }
       if (g.phase !== "reveal") return;
+      const loser = g.lastResult?.loser ?? -1;
       const next = nextRound(g, rng);
-      afterChange(next, { screen: "game" });
+      const opener: Opener = { seat: next.turn, reason: next.turn === loser ? "lost" : "nextAfterOut" };
+      afterChange(next, { screen: "game", opener, odds: null });
     },
   };
 

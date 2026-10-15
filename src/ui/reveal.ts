@@ -5,9 +5,16 @@ import type { Actions } from "../app/controller";
 import { HUMAN } from "../app/controller";
 import type { AppState } from "../app/state";
 import { revealText } from "../app/reveal";
+import { ODDS_QUESTION, formatOdds } from "../app/odds";
 import { avatarEl } from "./avatars";
 import { cardEl } from "./cards";
 import { h, button } from "./dom";
+
+/** Bold the leading question; the rest of the sentence stays plain text. */
+function oddsLine(text: string): (HTMLElement | string)[] {
+  if (!text.startsWith(ODDS_QUESTION)) return [text];
+  return [h("b", { class: "odds-q" }, ODDS_QUESTION), text.slice(ODDS_QUESTION.length)];
+}
 
 export function revealScreen(state: AppState, game: GameState, actions: Actions): HTMLElement {
   const r = game.lastResult;
@@ -60,7 +67,8 @@ export function revealScreen(state: AppState, game: GameState, actions: Actions)
       h("div", { class: "verdict-sum" }, ex.summary),
       h("div", { class: "verdict-loser" }, t.loserLine, t.youLine ? ` ${t.youLine}` : ""),
       t.outLine ? h("div", { class: "verdict-out" }, t.outLine) : null,
-      state.oddsLine ? h("div", { id: "odds-line", class: "odds-line" }, state.oddsLine) : null,
+      // Computed once per reveal by the controller (state.odds); this just prints it.
+      h("div", { id: "odds-line", class: "odds-line" }, state.odds ? oddsLine(formatOdds(state.odds)) : null),
     ),
     h(
       "div",
@@ -69,6 +77,7 @@ export function revealScreen(state: AppState, game: GameState, actions: Actions)
         class: "confirm big",
         key: "next",
       }),
+      game.phase === "over" ? button("Rematch", () => actions.rematch(), { class: "ghost big", key: "rematch" }) : null,
     ),
   );
 }
