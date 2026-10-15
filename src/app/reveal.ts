@@ -7,12 +7,6 @@ export interface PlayerRef {
   readonly human: number;
 }
 
-/** "What were the odds" line for a called bid, e.g. "Odds this bid existed: 23%". */
-export function oddsLine(p: number): string {
-  const pct = p <= 0 ? "0%" : p >= 1 ? "100%" : p < 0.01 ? "under 1%" : `${Math.round(p * 100)}%`;
-  return `Odds this bid existed: ${pct}`;
-}
-
 export interface RevealText {
   readonly headline: string;
   readonly verdictTitle: string;

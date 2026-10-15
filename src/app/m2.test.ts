@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { bidOdds, legalActions, mulberry32 } from "../engine";
 import type { Bid } from "../engine";
 import { createApp, HUMAN } from "./controller";
-import { oddsLine, standings } from "./reveal";
+import { standings } from "./reveal";
+import { formatOdds } from "./odds";
 import { validateSettings } from "./settings";
 import { DEFAULT_SETTINGS, INITIAL_STATE } from "./state";
 
@@ -24,12 +25,6 @@ describe("bidOdds", () => {
   });
   it("is exactly 0 when impossible", () => {
     expect(bidOdds({ category: "fiveOfAKind", rank: 9 }, 4)).toBe(0);
-  });
-  it("formats percentages", () => {
-    expect(oddsLine(0.234)).toBe("Odds this bid existed: 23%");
-    expect(oddsLine(0)).toBe("Odds this bid existed: 0%");
-    expect(oddsLine(0.004)).toBe("Odds this bid existed: under 1%");
-    expect(oddsLine(1)).toBe("Odds this bid existed: 100%");
   });
 });
 
@@ -76,10 +71,10 @@ describe("controller: odds line and rematch", () => {
   it("sets the odds line when BS is called", () => {
     const app = createApp(mulberry32(1));
     app.actions.startGame();
-    expect(app.getState().oddsLine).toBeNull();
+    expect(app.getState().odds).toBeNull();
     playToReveal(app);
     expect(app.getState().screen).toBe("reveal");
-    expect(app.getState().oddsLine).toMatch(/^Odds this bid existed: /);
+    expect(formatOdds(app.getState().odds!)).toMatch(/^What were the odds\? /);
   });
 
   it("rematch keeps settings and seats and resets game state", () => {
@@ -94,7 +89,7 @@ describe("controller: odds line and rematch", () => {
     expect(s.screen).toBe("game");
     expect(s.settings).toEqual({ bots: 2, cardCap: 4, difficulty: "hard" });
     expect(s.seats).toBe(seats);
-    expect(s.oddsLine).toBeNull();
+    expect(s.odds).toBeNull();
     expect(s.flash).toBeNull();
     expect(s.game!.round).toBe(1);
     expect(s.game!.bids).toHaveLength(0);
@@ -113,6 +108,6 @@ describe("controller: odds line and rematch", () => {
   });
 
   it("initial state has no odds line", () => {
-    expect(INITIAL_STATE.oddsLine).toBeNull();
+    expect(INITIAL_STATE.odds).toBeNull();
   });
 });

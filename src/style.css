@@ -316,7 +316,6 @@ h1, h2, h3 { margin: 0; }
 .quit-confirm button.small { min-height: 36px; }
 .quit-confirm button.bs.small { font-size: 12px; padding: 6px 14px; letter-spacing: 1px; }
 
-
 .table-area {
   position: relative;
   width: min(900px, 100%);
@@ -671,7 +670,7 @@ h1, h2, h3 { margin: 0; }
 .reveal-row.bidder { border-color: var(--gold); }
 .reveal-row.caller { border-color: var(--bs-red); }
 .reveal-row .who {
-  width: 130px;
+  width: 150px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -712,9 +711,21 @@ h1, h2, h3 { margin: 0; }
 .verdict-sum { font-size: 14px; opacity: 0.9; }
 .verdict-loser { font-size: 15px; font-weight: 700; }
 .verdict-out { font-size: 14px; color: #ffb3b9; }
-.odds-line { min-height: 0; font-size: 13px; color: var(--gold-soft); }
+.odds-line {
+  min-height: 0;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(212, 175, 55, 0.25);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--cream);
+  opacity: 0.92;
+  overflow-wrap: anywhere;
+}
+.odds-line .odds-q { color: var(--gold); margin-right: 2px; }
+.verdict.no .odds-line .odds-q { color: #ffb3b9; }
 .odds-line:empty { display: none; }
-.reveal-actions { padding-bottom: 12px; }
+.reveal-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding-bottom: 12px; }
 
 /* ---------- Game over ---------- */
 .over { justify-content: center; }

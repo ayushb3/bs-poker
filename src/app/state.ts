@@ -4,6 +4,7 @@
  */
 import type { Category, GameState, Rank, Suit } from "../engine";
 import type { Difficulty } from "../cpu";
+import type { RevealOdds } from "./odds";
 
 export interface Settings {
   /** Number of CPU opponents, 1..5. */
@@ -75,8 +76,8 @@ export interface AppState {
   /** Short banner shown over the table, e.g. "Rook calls BS!" */
   readonly flash: string | null;
   readonly log: readonly LogEntry[];
-  /** Pre-reveal odds text for the bid that was called, set when BS is called. */
-  readonly oddsLine: string | null;
+  /** "What were the odds" for the current reveal; computed once when BS is called. */
+  readonly odds: RevealOdds | null;
   readonly opener: Opener | null;
 }
 
@@ -91,6 +92,6 @@ export const INITIAL_STATE: AppState = {
   thinking: null,
   flash: null,
   log: [],
-  oddsLine: null,
+  odds: null,
   opener: null,
 };
