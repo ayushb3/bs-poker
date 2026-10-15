@@ -1,39 +1,81 @@
 # BS Poker
 
-BS Poker, a game by **Samarth**. A bluffing card game: every player holds a small hand, all hands together form a shared pool, and you bid hands you claim exist somewhere in that pool. Raise the bid or call BS. This repo is a browser version you play against 1 to 5 CPU opponents.
+A bluffing/poker hybrid card game **invented by Samarth**. Everyone holds a few cards; all hands together form one hidden pool. Players bid poker hands they claim exist somewhere in that pool, raising each time, until someone calls **BS**. Whoever was wrong takes an extra card next round. Reach the card cap and you're out; last player standing wins.
+
+Play it against 1–5 CPU opponents in the browser: a static site, no account, no network, works on a phone.
+
+> Patent pending 😉
+
+📜 **Rules v0.3 and the design rationale:** [docs/SPEC.md](./docs/SPEC.md) (the source of truth). [RULES.md](./RULES.md) is the older v0.2 write-up, kept for history.
 
 ## Run it
 
+Requires Node 22+.
+
 ```bash
-npm ci
-npm run dev        # http://localhost:5173
+npm ci            # install (uses the lockfile)
+npm run dev       # dev server with hot reload, prints a local URL
+npm run build     # typecheck + production build into dist/
+npm run preview   # serve the production build locally
+npm test          # engine + CPU tests (vitest)
+npm run typecheck # tsc --noEmit
+npm run sim       # CPU self-play: win rates and bids per round, printed
 ```
 
-Other scripts: `npm test`, `npm run typecheck`, `npm run build` (output in `dist/`), `npm run preview`.
+`dist/` is plain static files with a relative base path, so it can be dropped onto any static host (GitHub Pages, Netlify, an S3 bucket, a USB stick).
 
-## Rules in short
+## How to play
 
-Credit for the game and its rules goes to Samarth. Full rules v0.3 and the simulation behind them are in [docs/SPEC.md](docs/SPEC.md).
+1. On the title screen pick the number of opponents (1–5), the CPU difficulty (easy / medium / hard) and the card cap (4–8, default 6). Press **Play**.
+2. Round 1 deals everyone 2 cards. A random player opens; after that, the round's loser opens.
+3. On your turn, either **raise** (the picker only ever offers bids strictly above the current one, so you can't make an illegal bid) or press **Call BS!** on the last bid.
+4. When BS is called, all hands are revealed. The cards that make the claimed hand light up in gold, wilds included. If the hand is there, the caller loses; if not, the bidder loses. The loser is dealt one more card from the next round on.
+5. The reveal also shows **what the odds were**: how often that bid exists in a pool of that size, and how likely it looked from the bidder's seat.
+6. A player who reaches the card cap is out. Last one in wins. **Play again** rematches with the same table.
 
-- 54-card deck. The four 2s and both jokers are **wild**. Natural ranks run 3 through A.
-- Everyone starts with 2 cards. All cards in play form the pool, and nobody sees anyone else's hand.
-- On your turn, name a specific hand ("pair of 7s", "flush in hearts", "straight to 10") that you claim exists in the pool, higher than the last bid, or call **BS**.
-- A bid is higher if its category is higher, or the category is the same and the rank is higher (ties by second rank, or suit for a straight flush).
-- On BS the pool is revealed. If the hand exists, the caller takes a card. If not, the bidder does. Impossible bids are allowed as bluffs; calling BS on one always wins.
-- The round's loser opens the next one. Reach the card cap (default 6, configurable 4 to 8) and you are out. Last player standing wins.
+### Rules summary (v0.3)
 
-### The ladder (lowest to highest)
+- **Deck:** 54 cards. All four **2s** and both **jokers** are wild (6 wilds). Natural ranks run **3 through A**.
+- **Bids name ranks:** "pair of 7s", not "a pair". Flushes name a **suit only** ("flush in ♥"). Straights name their high card; the lowest straight is **3-4-5-6-7**.
+- **The ladder, lowest to highest** (ordered by how rare each named bid is with 6 wilds, decided by simulation):
 
-high card < pair < straight < trips < two pair < flush < full house < quads < straight flush < five of a kind
+  high card → pair → straight → trips → two pair → flush → full house → quads → straight flush → five of a kind
 
-Suits for flush tie-breaks: clubs < diamonds < hearts < spades. The lowest straight is 3-4-5-6-7.
+- **Raising:** a higher category, or the same category with a higher rank (two pair / full house compare the first rank, then the second; flushes compare suits ♣ < ♦ < ♥ < ♠; straight flushes compare high card, then suit).
+- **A bid exists** if the cards it is missing can be covered by the wilds in the pool. Impossible bids are allowed as desperation bluffs; BS on one always wins.
+- **Losing a round** = +1 card every round after. **Card cap** (default 6) eliminates you. The loser opens the next round; if they were just eliminated, the next player clockwise opens.
 
-## Layout
+### The CPU opponents
 
-- `src/engine/` pure rules engine (bids, `compare`, `exists`, odds, round loop)
-- `src/cpu/` easy / medium / hard bots
-- `src/app/` app state and controller (no DOM)
-- `src/ui/`, `src/style.css`, `index.html` rendering only
-- `legacy/`, `docs/bsp*.py` the original Python/JS prototype and simulations (rules v0.2)
+All three levels call BS when their estimate of P(current bid exists) drops below a threshold, otherwise raise to the cheapest bid they believe in, with a bluff rate set by difficulty.
 
-See [HANDOFF.md](HANDOFF.md) for decisions, open items and UI redesign seams.
+| Level | How it estimates | Calls BS below | Bids at | Bluff rate |
+|---|---|---:|---:|---:|
+| Easy | Static table: P(category exists) by pool size, ignores its own hand, noisy | 30% | 55% | 20% |
+| Medium | Monte Carlo over the cards it can't see, conditioned on its own hand | 40% | 60% | 12% |
+| Hard | Same, plus earlier bids by others nudge its samples toward hands consistent with those bids; bluffs less, and on ranks it holds | 45% | 65% | 7% |
+
+In seeded self-play, hard beats easy about 96% of heads-up games and medium about two thirds. The numbers live in `src/cpu/params.ts`.
+
+## Project layout
+
+```
+src/engine/   pure TypeScript rules engine (no DOM); shared by the UI, the bots and a future server
+  types.ts      Card, Bid, GameState … the contract
+  bids.ts       compare() owns the ladder; allBids(), legalRaises(), bidLabel()
+  exists.ts     exists(bid, pool) and explain() (witness cards for the reveal)
+  odds.ts       estimateExists(): Monte Carlo P(bid exists | known cards, pool size)
+  game.ts       newGame / applyAction / nextRound round loop, card cap, elimination
+  *.test.ts     brute-force oracle for exists(), SPEC table reproduction, game-loop tests
+src/cpu/      easy / medium / hard players behind one decide() policy; self-play sim
+src/app/      app state, controller (drives engine + bots), odds line, picker logic
+src/ui/       vanilla DOM screens: title, table, bid picker, reveal, game over
+legacy/       the June 2026 prototype (Python CLI + single-file web UI), kept for reference
+docs/         SPEC.md, the simulation scripts behind it, and screenshots
+```
+
+Continuous integration (`.github/workflows/ci.yml`) runs typecheck, tests and the build on every pull request and on `main`.
+
+## License
+
+MIT — do whatever, just don't sue me when you lose to your friends.
