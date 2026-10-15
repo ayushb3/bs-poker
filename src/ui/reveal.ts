@@ -1,9 +1,10 @@
 /** Reveal screen: every hand face up, witness cards in gold, verdict and who takes a card. */
 import type { GameState } from "../engine";
-import { bidLabel, explain } from "../engine";
+import { explain } from "../engine";
 import type { Actions } from "../app/controller";
 import { HUMAN } from "../app/controller";
 import type { AppState } from "../app/state";
+import { revealText } from "../app/reveal";
 import { avatarEl } from "./avatars";
 import { cardEl } from "./cards";
 import { h, button } from "./dom";
@@ -17,10 +18,6 @@ export function revealScreen(state: AppState, game: GameState, actions: Actions)
   // The engine already explains the result; recompute defensively if it is ever missing.
   const ex = r.explanation ?? explain(r.bid, r.pool);
   const witness = new Set(ex.cards.map((c) => c.id));
-  const loserNow = game.players[r.loser]?.cardCount ?? 0;
-  const bidderIsYou = r.bidder === HUMAN;
-  const callerIsYou = r.caller === HUMAN;
-
   const rows = game.players
     .filter((p) => p.hand.length > 0)
     .map((p) => {
@@ -44,19 +41,12 @@ export function revealScreen(state: AppState, game: GameState, actions: Actions)
       );
     });
 
-  const headline = `${name(r.caller)} called BS on ${bidderIsYou ? "your" : `${name(r.bidder)}'s`} ${bidLabel(r.bid)}`;
-  const verdictTitle = r.existed ? "It was there!" : "It wasn't there.";
-  const loserLine = `${name(r.loser)} ${r.loser === HUMAN ? "take" : "takes"} +1 card (now ${loserNow}).`;
-  const outLine =
-    r.eliminated.length > 0
-      ? r.eliminated.map((e) => `${name(e)} ${e === HUMAN ? "are" : "is"} out at ${game.config.cardCap} cards.`).join(" ")
-      : null;
-  const youLine = r.loser === HUMAN ? "Ouch." : callerIsYou || bidderIsYou ? "Nice one." : null;
+  const t = revealText(game, r, { name, human: HUMAN });
 
   return h(
     "main",
     { class: "screen reveal" },
-    h("h2", { class: "reveal-title" }, headline),
+    h("h2", { class: "reveal-title" }, t.headline),
     h("div", { class: "reveal-pool" }, rows),
     h(
       "div",
@@ -66,12 +56,11 @@ export function revealScreen(state: AppState, game: GameState, actions: Actions)
     h(
       "div",
       { class: `verdict ${r.existed ? "yes" : "no"}` },
-      h("div", { class: "verdict-title" }, verdictTitle),
+      h("div", { class: "verdict-title" }, t.verdictTitle),
       h("div", { class: "verdict-sum" }, ex.summary),
-      h("div", { class: "verdict-loser" }, loserLine, youLine ? ` ${youLine}` : ""),
-      outLine ? h("div", { class: "verdict-out" }, outLine) : null,
-      // M2 "what were the odds" line goes here.
-      h("div", { id: "odds-line", class: "odds-line" }),
+      h("div", { class: "verdict-loser" }, t.loserLine, t.youLine ? ` ${t.youLine}` : ""),
+      t.outLine ? h("div", { class: "verdict-out" }, t.outLine) : null,
+      state.oddsLine ? h("div", { id: "odds-line", class: "odds-line" }, state.oddsLine) : null,
     ),
     h(
       "div",

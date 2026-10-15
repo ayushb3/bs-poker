@@ -60,6 +60,8 @@ export interface AppState {
   /** Short banner shown over the table, e.g. "Rook calls BS!" */
   readonly flash: string | null;
   readonly log: readonly LogEntry[];
+  /** Pre-reveal odds text for the bid that was called, set when BS is called. */
+  readonly oddsLine: string | null;
 }
 
 export const INITIAL_STATE: AppState = {
@@ -72,4 +74,5 @@ export const INITIAL_STATE: AppState = {
   thinking: null,
   flash: null,
   log: [],
+  oddsLine: null,
 };

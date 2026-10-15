@@ -40,7 +40,7 @@ export function titleScreen(state: AppState, actions: Actions): HTMLElement {
       "div",
       { class: "title-card" },
       h("h1", { class: "logo" }, "BS Poker"),
-      h("p", { class: "credit" }, "A bluffing card game invented by ", h("b", null, "Samarth")),
+      h("p", { class: "credit" }, "BS Poker, a game by ", h("b", null, "Samarth"), "."),
       h(
         "div",
         { class: "settings" },

@@ -3,7 +3,8 @@
  * `known` cards are certainly in the pool and the rest are drawn uniformly without
  * replacement from the remaining deck.
  */
-import { makeDeck } from "./deck";
+import { bidKey } from "./bids";
+import { makeDeck, mulberry32 } from "./deck";
 import { addCard, countPool, existsInCounts, missingNaturals, type PoolCounts } from "./exists";
 import { type Bid, type Card, type Rng } from "./types";
 
@@ -74,4 +75,22 @@ export function estimateExists(bid: Bid, opts: EstimateOptions): number {
     if (existsInCounts(bid, work)) hits++;
   }
   return hits / trials;
+}
+
+const ODDS_TRIALS = 6000;
+const ODDS_SEED = 0x0dd5;
+const oddsCache = new Map<string, number>();
+
+/**
+ * "What were the odds": P(this exact bid exists) in a pool of `poolSize` cards, before
+ * anyone's hands are seen. Deterministic (fixed seed) and cached, so the same bid and pool
+ * size always give the same number. Exact 0 or 1 where the bid is impossible or guaranteed.
+ */
+export function bidOdds(bid: Bid, poolSize: number): number {
+  const key = `${poolSize}:${bidKey(bid)}`;
+  const hit = oddsCache.get(key);
+  if (hit !== undefined) return hit;
+  const p = estimateExists(bid, { poolSize, trials: ODDS_TRIALS, rng: mulberry32(ODDS_SEED + poolSize) });
+  oddsCache.set(key, p);
+  return p;
 }
