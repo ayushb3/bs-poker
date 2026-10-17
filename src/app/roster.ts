@@ -1,38 +1,40 @@
 /**
- * Offline "critter" avatars + the prototype's poker-y bot names.
- * No network: an emoji animal in a gradient circle.
+ * Who sits at the table. Three bots have painted portraits (Cipher, Vega,
+ * Onyx); they always take the first seats. Tables with 4–5 bots fill the
+ * extra chairs with other names that reuse a portrait as an alternate look
+ * (variant 1), which the UI renders mirrored and re-graded.
  */
 import type { Rng } from "../engine";
-import type { Seat } from "./state";
+import type { Portrait, Seat } from "./state";
 
-interface Critter {
-  readonly name: string;
-  readonly critter: string;
-  readonly hue: number;
+export const PORTRAITS: readonly Portrait[] = ["cipher", "vega", "onyx"];
+
+const PORTRAIT_NAME: Record<Portrait, string> = { cipher: "Cipher", vega: "Vega", onyx: "Onyx" };
+
+/** Names for the extra chairs at 4–5 bot tables. */
+export const EXTRA_NAMES: readonly string[] = ["Rook", "Sable", "Lyra", "Juno", "Hawke"];
+
+export const HUMAN_SEAT: Seat = { id: 0, name: "You", portrait: null, variant: 0, human: true };
+
+function shuffled<T>(items: readonly T[], rng: Rng): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.min(i, Math.floor(rng() * (i + 1)));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out;
 }
 
-export const CRITTERS: readonly Critter[] = [
-  { name: "Vega", critter: "🦊", hue: 22 },
-  { name: "Rook", critter: "🐻", hue: 200 },
-  { name: "Sable", critter: "🦝", hue: 280 },
-  { name: "Onyx", critter: "🐸", hue: 140 },
-  { name: "Lyra", critter: "🐙", hue: 330 },
-  { name: "Cipher", critter: "🦉", hue: 250 },
-  { name: "Juno", critter: "🐯", hue: 40 },
-  { name: "Hawke", critter: "🐼", hue: 180 },
-];
-
-export const HUMAN_SEAT: Seat = { id: 0, name: "You", critter: "😎", hue: 46, human: true };
-
-/** Seat 0 is the human; bots get distinct random critters. */
+/** Seat 0 is the human; bots get distinct names, painted portraits first. */
 export function makeSeats(bots: number, rng: Rng): Seat[] {
-  const pool = [...CRITTERS];
+  const portraits = shuffled(PORTRAITS, rng);
+  const extras = shuffled(EXTRA_NAMES, rng);
   const seats: Seat[] = [HUMAN_SEAT];
-  for (let i = 1; i <= bots; i++) {
-    const pick = Math.min(pool.length - 1, Math.floor(rng() * pool.length));
-    const [c] = pool.splice(pick, 1);
-    if (!c) break;
-    seats.push({ id: i, name: c.name, critter: c.critter, hue: c.hue, human: false });
+  for (let i = 0; i < bots; i++) {
+    const portrait = portraits[i % portraits.length]!;
+    const first = i < portraits.length;
+    const name = first ? PORTRAIT_NAME[portrait] : (extras[i - portraits.length] ?? `Bot ${i + 1}`);
+    seats.push({ id: i + 1, name, portrait, variant: first ? 0 : 1, human: false });
   }
   return seats;
 }

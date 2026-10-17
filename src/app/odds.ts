@@ -133,3 +133,25 @@ function numberArticle(n: number): string {
 function possessive(name: string): string {
   return /s$/i.test(name) ? `${name}'` : `${name}'s`;
 }
+
+/** "22%", "under 1%", "certain", "impossible": the number alone, for compact lines. */
+export function shortPercent(n: OddsNumber): string {
+  if (n.exact) return n.p >= 1 ? "certain" : "impossible";
+  if (n.p < 0.01) return "under 1%";
+  if (n.p > 0.99) return "over 99%";
+  return `${Math.round(n.p * 100)}%`;
+}
+
+/**
+ * The compact two-line odds readout on the Saloon reveal:
+ *   "Odds it was there: 22%"
+ *   "From Vega's seat (holding a 7): 41%"
+ */
+export function shortOdds(o: RevealOdds): { overall: string; seat: string } {
+  const seat = o.bidderName == null ? "From your seat" : `From ${possessive(o.bidderName)} seat`;
+  const holding = o.held ? ` (holding ${o.held})` : "";
+  return {
+    overall: `Odds it was there: ${shortPercent(o.overall)}`,
+    seat: `${seat}${holding}: ${shortPercent(o.fromSeat)}`,
+  };
+}
