@@ -2,7 +2,7 @@
 
 A bluffing/poker hybrid card game **invented by Samarth**. Everyone holds a few cards; all hands together form one hidden pool. Players bid poker hands they claim exist somewhere in that pool, raising each time, until someone calls **BS**. Whoever was wrong takes an extra card next round. Reach the card cap and you're out; last player standing wins.
 
-Play it against 1–5 CPU opponents in the browser: a static site, no account, no network, works on a phone.
+Play it against 1–5 CPU opponents in the browser: take a seat at a candlelit saloon table (the "Saloon" look). A static site, no account, works on a phone; the only network request is Google Fonts.
 
 > Patent pending 😉
 
@@ -69,12 +69,20 @@ src/engine/   pure TypeScript rules engine (no DOM); shared by the UI, the bots 
   *.test.ts     brute-force oracle for exists(), SPEC table reproduction, game-loop tests
 src/cpu/      easy / medium / hard players behind one decide() policy; self-play sim
 src/app/      app state, controller (drives engine + bots), odds line, picker logic
-src/ui/       vanilla DOM screens: title, table, bid picker, reveal, game over
+src/ui/       vanilla DOM "Saloon" screens: title, table scene (layout.ts seats 1-5 bots), HUD + change-hand sheet, reveal, game over
+assets/       art, card faces, props and textures imported by src/ui/assets.ts (only imported files ship)
 legacy/       the June 2026 prototype (Python CLI + single-file web UI), kept for reference
 docs/         SPEC.md, the simulation scripts behind it, and screenshots
 ```
 
 Continuous integration (`.github/workflows/ci.yml`) runs typecheck, tests and the build on every pull request and on `main`.
+
+## Credits
+
+- **Card faces:** Dmitry Fomin's "English pattern" playing cards, via Wikimedia Commons, public domain (CC0). Downscaled to WebP in `assets/cards/`. The joker face is drawn in CSS for this project (the Commons joker/back designs are LGPL and are not used).
+- **Props and textures:** [Poly Haven](https://polyhaven.com) wooden candlestick model render and old planks texture (table rail), CC0.
+- **Character portraits, title painting, saloon wall and card back:** generated with Google Gemini for this project (`assets/art/`; `cut.py` cuts the figures off their green screen).
+- **Fonts:** [Rye](https://fonts.google.com/specimen/Rye), [Alegreya Sans and Alegreya Sans SC](https://fonts.google.com/specimen/Alegreya+Sans), SIL Open Font License, served by Google Fonts.
 
 ## License
 

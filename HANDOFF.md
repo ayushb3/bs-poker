@@ -19,8 +19,7 @@ CPU
 - The static table for easy is recomputed at module load with a fixed seed rather than hard-coded from the spec (it matches the spec rows within a few points and covers pool sizes the spec table doesn't).
 
 UI
-- **No network at all.** The June prototype used the DiceBear avatar API; the new UI uses emoji "critter" avatars in a gradient ring instead, with the prototype's bot names (Vega, Rook, Sable, Onyx, Lyra, Cipher, Juno, Hawke).
-- Phone layout (≤ 720px) puts opponents in a row above a shortened table rather than around the oval; the game log is desktop-only (≥ 1100px).
+- Superseded by the Saloon redesign (see the end of this file).
 - "Rematch" (same settings and opponents) is offered on the game-over screen and on the final reveal.
 - The human always sits at seat 0. CPU turns are decided immediately and revealed after a 0.7–1.2s skippable delay.
 - Settings persist in `localStorage` (best-effort, wrapped in try/catch).
@@ -33,7 +32,7 @@ Process
 
 ## Unfinished / not verified
 
-- Not tested on real touch devices or Safari; only headless Chromium at 390×844 and 1280×800 (screenshots in `docs/screenshots/`).
+- Not tested on real touch devices or Safari; only headless Chromium at 390×844 and 1280×800 (screenshots in `docs/screenshots/`, retaken for the Saloon redesign).
 - No sound, no animations beyond the prototype's deal/pulse/embers, no undo.
 - CPU strength was tuned by self-play, not against humans. Easy may still feel too strong or too weak; the knobs are in `src/cpu/params.ts` and `npm run sim` prints win rates.
 - The two-pair / full-house pickers show every legal second rank; on a phone that is two rows of chips, which is the tallest the picker gets.
@@ -49,7 +48,7 @@ Process
 6. Hard vs easy should be noticeably different: easy bids things it can't see and calls BS on safe bids more often.
 
 ## UI redesign seams
-A redesign should only touch `src/ui/*.ts`, `src/style.css` and `index.html`. Do not edit `src/engine`, `src/cpu` or `src/app`.
+A redesign should mostly touch `src/ui/*.ts`, `src/style.css` and `index.html`. Do not edit `src/engine`, `src/cpu` or `src/app`.
 
 Entry: `src/main.ts` calls `createApp()` then `mountRenderer(root, app)` (`src/ui/render.ts`), which re-renders the whole screen from `AppState` on every change.
 
@@ -67,3 +66,15 @@ Actions the UI calls (`Actions`, `src/app/controller.ts`):
 Text helpers for screens: `revealText`, `standings` in `src/app/reveal.ts`, `formatOdds` in `src/app/odds.ts`, `settingsSummary` in `src/app/state.ts`; engine helpers `bidLabel`, `rankLabel`, `suitSymbol`, `cardLabel`, `legalActions`, `poolOf`, `explain`.
 
 Per screen: title `ui/title.ts`, table `ui/game.ts` + `ui/picker.ts`, reveal `ui/reveal.ts`, game over `ui/over.ts`, help `ui/help.ts`. Shared: `ui/dom.ts` (`h`, `button`), `ui/cards.ts`, `ui/avatars.ts`, `ui/particles.ts`. Keep `data-key` on buttons so focus survives re-render.
+
+## Saloon redesign (2026-10-16)
+
+The UI was rebuilt to the "Saloon" mockups (RDR2-style, candlelit). Engine and CPU are untouched.
+
+- **Stage.** Everything is laid out on a 390px-wide stage (`ui/stage.ts`) scaled to the window: phones fill the width (height flexes, min 700 logical px, `.short` below 780); wider screens get a centred phone column at 844px over a blurred wall backdrop. The scene block (figures, table, claim) shifts by `--off` as the height changes; header/feed are top-anchored, hand/HUD bottom-anchored.
+- **Seats.** `ui/layout.ts` places 1–5 figures along the far rail (projected from the CSS perspective table), evenly spaced, non-overlapping, bottoms tucked under the rail; tested in `layout.test.ts`.
+- **Characters.** Only Cipher, Vega and Onyx have art. `makeSeats` now always seats those three first; 4th/5th bots get other names (Rook, Sable, Lyra, Juno, Hawke) and reuse a portrait as `variant: 1`, drawn mirrored and re-graded. `Seat` lost `critter`/`hue` and gained `portrait`/`variant`.
+- **Moods.** `revealMood` (app/reveal.ts): loser of the call is `caught`, winner `smug`, everyone else neutral. Image mapping is the single `PORTRAIT_ART` table in `ui/assets.ts`; smug/caught use the painted art until candlelit versions exist.
+- **Picker.** ‹ › walk the engine's ascending legal raises (`stepBid` in app/picker.ts, `actions.stepBid`), the parchment button confirms, "Change hand" opens a sheet with hand type / rank / second rank / suit (still driven by `derivePicker`). `actions.pickBid(bid)` selects an exact legal bid.
+- **Reveal.** Short odds readout via `shortOdds` (app/odds.ts); the long `formatOdds` sentence is kept (tested) but no longer shown. Outcome line via `outcomeText`.
+- **Not done / approximations:** no sound; alternate-look bots are mirrored recolours rather than new characters; the painted smug/caught art is brighter than the candlelit seated art; the Vega smug cut-out has a small leftover patch on its left edge.
