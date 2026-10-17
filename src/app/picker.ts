@@ -98,3 +98,21 @@ export function pickRank2(p: PickerState, rank2: Rank): PickerState {
 export function pickSuit(p: PickerState, suit: Suit): PickerState {
   return { ...p, suit };
 }
+
+/**
+ * Step the selection along the ladder of legal raises: dir +1 is the next
+ * dearer bid, -1 the next cheaper. Clamps at both ends. An incomplete or
+ * unknown selection steps from the cheapest raise.
+ */
+export function stepBid(legal: readonly Bid[], p: PickerState, dir: 1 | -1): Bid | null {
+  if (legal.length === 0) return null;
+  const selected = derivePicker(legal, p).selected;
+  const i = selected ? legal.indexOf(selected) : -1;
+  if (i < 0) return legal[0] ?? null;
+  return legal[Math.max(0, Math.min(legal.length - 1, i + dir))] ?? null;
+}
+
+/** Whether `bid` is one of the legal raises (structural match). */
+export function findLegal(legal: readonly Bid[], bid: Bid): Bid | null {
+  return derivePicker(legal, pickerFromBid(bid)).selected;
+}

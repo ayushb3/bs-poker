@@ -20,7 +20,7 @@ export function helpPanel(onClose: () => void): HTMLElement {
     { class: "overlay", role: "dialog", "aria-modal": "true", "aria-labelledby": "help-title" },
     h(
       "div",
-      { class: "panel help-box" },
+      { class: "help-box" },
       h("h2", { id: "help-title" }, "How to play"),
       h(
         "p",
@@ -52,9 +52,10 @@ export function helpPanel(onClose: () => void): HTMLElement {
         null,
         h("li", null, "Everyone shows their cards. If the hand is in the pool, the caller loses; if not, the bidder loses."),
         h("li", null, "The loser takes +1 card for every round after. The loser also opens the next round."),
+        h("li", null, "On the reveal, gold cards are the ones that make the claimed hand."),
         h("li", null, "Reach the card cap and you're out. Last player standing wins."),
       ),
-      h("div", { class: "close-row" }, button("Got it", onClose, { class: "confirm", key: "help-close" })),
+      h("div", { class: "close-row" }, button("Got it", onClose, { class: "brush parchment", key: "help-close" })),
     ),
   );
 }

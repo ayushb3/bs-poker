@@ -1,83 +1,167 @@
-/** Reveal screen: every hand face up, witness cards in gold, verdict and who takes a card. */
-import type { GameState } from "../engine";
-import { explain } from "../engine";
+/**
+ * Reveal: every hand face up in front of its owner. Cards that make the
+ * claimed hand glow gold and lift, the rest dim. The winner of the call looks
+ * smug, the loser caught. Banner, breakdown, odds and the outcome follow.
+ */
+import type { Card, GameState } from "../engine";
+import { bidLabel, explain } from "../engine";
 import type { Actions } from "../app/controller";
 import { HUMAN } from "../app/controller";
 import type { AppState } from "../app/state";
-import { revealText } from "../app/reveal";
-import { ODDS_QUESTION, formatOdds } from "../app/odds";
-import { avatarEl } from "./avatars";
-import { cardEl } from "./cards";
+import { outcomeText, revealMood, revealText } from "../app/reveal";
+import { shortOdds } from "../app/odds";
+import { backdropEl, sceneEl } from "./scene";
+import { cardEl, fan } from "./cards";
 import { h, button } from "./dom";
+import { fanStep } from "./layout";
+import { headerEl } from "./game";
 
-/** Bold the leading question; the rest of the sentence stays plain text. */
-function oddsLine(text: string): (HTMLElement | string)[] {
-  if (!text.startsWith(ODDS_QUESTION)) return [text];
-  return [h("b", { class: "odds-q" }, ODDS_QUESTION), text.slice(ODDS_QUESTION.length)];
+/** Flip the cards in once per reveal. */
+let flippedKey = "";
+
+function possessive(name: string): string {
+  return /s$/i.test(name) ? `${name}'` : `${name}'s`;
 }
 
-export function revealScreen(state: AppState, game: GameState, actions: Actions): HTMLElement {
+function revealCard(card: Card, w: number, witness: boolean, flip: boolean, order: number, extra: string): HTMLElement {
+  const delay = flip ? `animation-delay:${200 + order * 70}ms;` : "";
+  return cardEl(card, {
+    width: w,
+    cls: `${witness ? "witness" : "dim"}${flip ? " flip" : ""}`,
+    style: `${extra}${delay}`,
+  });
+}
+
+export function revealScreen(state: AppState, game: GameState, actions: Actions, short: boolean): HTMLElement {
   const r = game.lastResult;
   if (!r) {
-    return h("main", { class: "screen reveal" }, h("p", null, "Nothing to reveal."), button("Continue", () => actions.nextRound(), { key: "next" }));
+    return h(
+      "main",
+      { class: "screen reveal" },
+      backdropEl("reveal"),
+      h("div", { class: "hud" }, button("Continue", () => actions.nextRound(), { class: "brush parchment", key: "next" })),
+    );
   }
   const name = (seat: number): string => state.seats[seat]?.name ?? `Player ${seat}`;
-  // The engine already explains the result; recompute defensively if it is ever missing.
   const ex = r.explanation ?? explain(r.bid, r.pool);
   const witness = new Set(ex.cards.map((c) => c.id));
-  const rows = game.players
-    .filter((p) => p.hand.length > 0)
-    .map((p) => {
-      const seat = state.seats[p.id];
-      const role = p.id === r.bidder ? "bidder" : p.id === r.caller ? "caller" : "";
-      return h(
-        "div",
-        { class: `reveal-row${role ? ` ${role}` : ""}` },
-        h(
-          "div",
-          { class: "who" },
-          seat ? avatarEl(seat, "sm") : null,
-          h("span", { class: "who-name" }, seat?.name ?? `Player ${p.id}`),
-          role ? h("span", { class: "role" }, role === "bidder" ? "bid" : "called") : null,
-        ),
-        h(
-          "div",
-          { class: "row-cards" },
-          p.hand.map((c) => cardEl(c, { size: "small", witness: witness.has(c.id) })),
-        ),
-      );
+  const key = `${game.round}:${r.bidder}:${r.caller}:${r.pool.length}`;
+  const flip = key !== flippedKey;
+  flippedKey = key;
+
+  const { scene, spots } = sceneEl({
+    state,
+    game,
+    mode: "reveal",
+    dealBacks: false,
+    enterFigures: false,
+    figure: (seat) => {
+      const p = game.players[seat.id];
+      const wasIn = (p?.hand.length ?? 0) > 0;
+      return {
+        mood: wasIn ? revealMood(r, seat.id) : "neutral",
+        active: false,
+        thinking: false,
+        out: !wasIn,
+        label: wasIn ? seat.name : `${seat.name} · out`,
+      };
+    },
+  });
+
+  // Bots' hands, face up in front of each figure.
+  let order = 0;
+  for (const seat of state.seats) {
+    if (seat.human) continue;
+    const p = game.players[seat.id];
+    const spot = spots.get(seat.id);
+    if (!p || !spot || p.hand.length === 0) continue;
+    const n = p.hand.length;
+    const w = spot.revealW;
+    const step = fanStep(n, w, spot.slot, w * 0.8);
+    const total = w + step * (n - 1);
+    const row = h("div", {
+      class: "reveal-hand",
+      style: `left:${(spot.cx - total / 2).toFixed(1)}px;top:${spot.bottom + 8}px;width:${total.toFixed(1)}px;height:${w * 1.5}px`,
+      role: "group",
+      "aria-label": `${seat.name}'s cards`,
     });
+    p.hand.forEach((c, i) => {
+      const { rot } = fan(i, n, 7, 0);
+      const wit = witness.has(c.id);
+      const extra = `left:${(i * step).toFixed(1)}px;--rot:${rot}deg;--lift:${wit ? -6 : 0}px;`;
+      row.appendChild(revealCard(c, w, wit, flip, order++, extra));
+    });
+    scene.appendChild(row);
+  }
 
   const t = revealText(game, r, { name, human: HUMAN });
+  const out = outcomeText(game, r, { name, human: HUMAN });
+  const odds = state.odds ? shortOdds(state.odds) : null;
+  const caught = !r.existed;
+  const callerName = r.caller === HUMAN ? "You" : name(r.caller);
+  const bidderName = r.bidder === HUMAN ? "your" : possessive(name(r.bidder));
 
+  scene.appendChild(
+    h(
+      "div",
+      { class: "verdict", role: "status" },
+      h("div", { class: `verdict-banner ${caught ? "caught" : "there"}` }, h("span", null, caught ? "Caught bluffing" : "It was there")),
+      h("span", { class: "verdict-line" }, `${callerName} called BS on ${bidderName} `, h("b", null, bidLabel(r.bid))),
+      h("span", { class: "verdict-sum" }, ex.summary),
+      odds ? h("span", { class: "verdict-odds" }, odds.overall, h("span", { class: "odds-seat" }, odds.seat)) : null,
+    ),
+  );
+
+  // Your cards along the bottom.
+  const me = game.players[HUMAN];
+  const mine = me?.hand ?? [];
+  const w = short ? 48 : 64;
+  const n = mine.length;
+  const step = fanStep(n, w, 340, w * 0.8);
+  const yourHand =
+    n > 0
+      ? h(
+          "div",
+          { class: "hand-area reveal-mine" },
+          h(
+            "div",
+            { class: "hand", "aria-label": "Your cards", style: `--hw:${w}px` },
+            mine.map((c, i) => {
+              const { rot, dy } = fan(i, n, n <= 2 ? 13 : 7, 2);
+              const wit = witness.has(c.id);
+              const extra = `--x:${((i - (n - 1) / 2) * step).toFixed(1)}px;--rot:${rot}deg;--dy:${dy + (wit ? -8 : 0)}px;`;
+              return cardEl(c, { width: w, cls: `in-hand ${wit ? "witness" : "dim"}`, style: extra });
+            }),
+          ),
+        )
+      : null;
+
+  const over = game.phase === "over";
   return h(
     "main",
     { class: "screen reveal" },
-    h("h2", { class: "reveal-title" }, t.headline),
-    h("div", { class: "reveal-pool" }, rows),
+    backdropEl("reveal"),
+    scene,
+    yourHand,
     h(
       "div",
-      { class: "legend" },
-      ex.exists ? "Gold cards make the hand (wilds included)" : "Gold cards are the closest partial match",
+      { class: "hud hud-reveal" },
+      h(
+        "span",
+        { class: "outcome" },
+        out.take,
+        " ",
+        h("span", { class: "muted" }, out.holding),
+        t.youLine ? h("span", { class: "muted" }, ` ${t.youLine}`) : null,
+      ),
+      t.outLine && r.eliminated.length > 1 ? h("span", { class: "outcome muted" }, t.outLine) : null,
+      h(
+        "div",
+        { class: "hud-row" },
+        over ? button("Rematch", () => actions.rematch(), { class: "text-btn", key: "rematch" }) : null,
+        button(over ? "See results" : "Next round", () => actions.nextRound(), { class: "brush parchment big", key: "next" }),
+      ),
     ),
-    h(
-      "div",
-      { class: `verdict ${r.existed ? "yes" : "no"}` },
-      h("div", { class: "verdict-title" }, t.verdictTitle),
-      h("div", { class: "verdict-sum" }, ex.summary),
-      h("div", { class: "verdict-loser" }, t.loserLine, t.youLine ? ` ${t.youLine}` : ""),
-      t.outLine ? h("div", { class: "verdict-out" }, t.outLine) : null,
-      // Computed once per reveal by the controller (state.odds); this just prints it.
-      h("div", { id: "odds-line", class: "odds-line" }, state.odds ? oddsLine(formatOdds(state.odds)) : null),
-    ),
-    h(
-      "div",
-      { class: "reveal-actions" },
-      button(game.phase === "over" ? "See results" : "Next round", () => actions.nextRound(), {
-        class: "confirm big",
-        key: "next",
-      }),
-      game.phase === "over" ? button("Rematch", () => actions.rematch(), { class: "ghost big", key: "rematch" }) : null,
-    ),
+    headerEl(game, actions, `Round ${game.round} · reveal`, false),
   );
 }

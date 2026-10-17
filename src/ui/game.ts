@@ -1,223 +1,222 @@
-/** The game screen: opponents around the felt, the plaque, your hand and the controls. */
+/** The turn screen: figures around the candlelit table, the claim, your hand and the HUD. */
 import type { GameState } from "../engine";
 import { bidLabel, poolOf } from "../engine";
 import type { Actions } from "../app/controller";
 import { HUMAN } from "../app/controller";
-import type { AppState, Opener, Seat } from "../app/state";
-import { settingsSummary } from "../app/state";
-import { avatarEl } from "./avatars";
-import { cardEl, miniCards } from "./cards";
+import type { AppState, Opener } from "../app/state";
+import { backdropEl, sceneEl } from "./scene";
+import { cardEl, claimCards, fan } from "./cards";
 import { h, button } from "./dom";
-import { bidPicker } from "./picker";
+import { bidHud, changeHandSheet } from "./picker";
+import { getLocal, resetLocal } from "./local";
+import { fanStep } from "./layout";
 
-/** Only animate the deal once per round, not on every re-render. */
-let dealtRound = -1;
-let dealtGame: GameState | null = null;
+/** Animate deals and claims once per change, not on every re-render. */
+let dealtKey = "";
+let claimKey = "";
+let seenGame: GameState | null = null;
 
-/** Opponents sit on the upper arc of the oval (desktop); CSS flattens this to a row on phones. */
-function opponentPosition(i: number, total: number): { x: number; y: number } {
-  const startDeg = 20;
-  const endDeg = 160;
-  const frac = total === 1 ? 0.5 : i / (total - 1);
-  const angle = ((startDeg + frac * (endDeg - startDeg)) * Math.PI) / 180;
-  const rx = 44;
-  const ry = 35;
-  return { x: 50 + rx * Math.cos(angle), y: 50 - ry * Math.sin(angle) };
+function name(state: AppState, seat: number): string {
+  return state.seats[seat]?.name ?? `Player ${seat}`;
 }
 
-function opponentEl(seat: Seat, game: GameState, state: AppState, pos: { x: number; y: number }): HTMLElement {
-  const p = game.players[seat.id];
-  const eliminated = p?.eliminated ?? false;
-  const count = p?.cardCount ?? 0;
-  const active = game.phase === "bidding" && game.turn === seat.id && !eliminated;
-  const thinking = active && state.thinking === seat.id;
-  const classes = ["opponent"];
-  if (active) classes.push("active");
-  if (thinking) classes.push("thinking");
-  if (eliminated) classes.push("eliminated");
-  return h(
-    "div",
-    {
-      class: classes.join(" "),
-      style: `--x:${pos.x.toFixed(1)}%;--y:${pos.y.toFixed(1)}%`,
-      "aria-label": `${seat.name}, ${eliminated ? "eliminated" : `${count} card${count === 1 ? "" : "s"}`}${thinking ? ", thinking" : ""}`,
-    },
-    thinking ? h("div", { class: "thinking-dots", "aria-hidden": "true" }, "•••") : null,
-    avatarEl(seat, "lg"),
-    h("div", { class: "name" }, seat.name),
-    h("div", { class: "cards" }, eliminated ? "OUT" : `${count} card${count === 1 ? "" : "s"}`),
-    eliminated ? null : miniCards(count),
-  );
-}
-
-function plaque(state: AppState, game: GameState): HTMLElement {
-  const last = game.bids[game.bids.length - 1];
-  const seats = state.seats;
-  if (state.flash) {
-    return h("div", { class: "center" }, h("div", { class: "declaration bs-flash", role: "status" }, state.flash));
-  }
-  if (last) {
-    const by = seats[last.player]?.name ?? "?";
-    return h(
-      "div",
-      { class: "center" },
-      h("div", { class: "declaration", role: "status" }, bidLabel(last.bid)),
-      h("div", { class: "by" }, `bid by ${by}`),
-      turnInfo(state, game),
-    );
-  }
-  return h(
-    "div",
-    { class: "center" },
-    h("div", { class: "declaration quiet", role: "status" }, "No bid yet"),
-    turnInfo(state, game),
-  );
-}
-
-function turnInfo(state: AppState, game: GameState): HTMLElement {
-  if (game.phase !== "bidding") return h("div", { class: "turn-info" }, "Showdown!");
-  if (game.turn === HUMAN) return h("div", { class: "turn-info you" }, "Your move");
-  const name = state.seats[game.turn]?.name ?? "CPU";
-  return h("div", { class: "turn-info" }, `${name} is thinking…`);
-}
-
-/** "Vega lost, so Vega opens" / "you lost, so you open" / "Vega opens" — shown while the round has no bid yet. */
-function openerHint(state: AppState, game: GameState, opener: Opener | null): string | null {
-  if (!opener || game.phase !== "bidding") return null;
+/** "Vega lost, so Vega opens" / "You lost, so you open" / "Vega opens". */
+function openerHint(state: AppState, opener: Opener | null): string | null {
+  if (!opener) return null;
   const you = opener.seat === HUMAN;
-  const name = you ? "you" : (state.seats[opener.seat]?.name ?? "?");
+  const who = you ? "You" : name(state, opener.seat);
   const opens = you ? "open" : "opens";
-  return opener.reason === "lost" ? `${name} lost, so ${name} ${opens}` : `${name} ${opens}`;
+  return opener.reason === "lost" ? `${who} lost, so ${you ? "you" : who} ${opens}` : `${who} ${opens}`;
 }
 
-function historyStrip(state: AppState, game: GameState): HTMLElement {
-  const recent = game.bids.slice(-5);
-  const hint = openerHint(state, game, state.opener);
+export function headerEl(game: GameState, actions: Actions, right: string | null, canQuit: boolean): HTMLElement {
   return h(
-    "div",
-    { class: "history", "aria-label": "Recent bids" },
-    recent.length === 0
-      ? h(
-          "span",
-          { class: "hist-empty" },
-          `Round ${game.round} · ${poolOf(game).length} cards in the pool`,
-          hint ? h("span", { class: "opener-hint" }, ` · ${hint}`) : null,
-        )
-      : recent.map((r, i) =>
-          h(
-            "span",
-            { class: `hist${i === recent.length - 1 ? " latest" : ""}` },
-            h("b", null, state.seats[r.player]?.name ?? "?"),
-            " ",
-            bidLabel(r.bid),
-          ),
-        ),
+    "header",
+    { class: "top" },
+    h(
+      "div",
+      { class: "brand" },
+      h("span", { class: "wordmark" }, "BS Poker"),
+      h("span", { class: "round-tag" }, right ?? `Round ${game.round} · out at ${game.config.cardCap}`),
+    ),
+    h(
+      "div",
+      { class: "top-btns" },
+      button("?", () => actions.toggleHelp(true), { class: "round-btn rye", key: "help", ariaLabel: "How to play" }),
+      canQuit
+        ? button("✕", () => actions.confirmQuit(true), { class: "round-btn", key: "quit", ariaLabel: "Leave the table" })
+        : null,
+    ),
   );
 }
 
-function controls(state: AppState, game: GameState, actions: Actions): HTMLElement {
-  if (state.flash) {
+function historyFeed(state: AppState, game: GameState): HTMLElement {
+  const recent = game.bids.slice(-4);
+  if (recent.length === 0) {
+    const hint = openerHint(state, state.opener);
+    return h("div", { class: "feed", "aria-label": "Bid history" }, hint ? h("span", null, hint) : null);
+  }
+  return h(
+    "ol",
+    { class: "feed", "aria-label": "Bid history" },
+    recent.map((r, i) =>
+      h(
+        "li",
+        { style: `opacity:${(0.4 + (0.6 * (i + 1)) / recent.length).toFixed(2)}` },
+        `${name(state, r.player)} — ${bidLabel(r.bid)}`,
+      ),
+    ),
+  );
+}
+
+function claimBlock(state: AppState, game: GameState): HTMLElement {
+  const last = game.bids[game.bids.length - 1];
+  const pool = poolOf(game).length;
+  const key = `${game.round}:${game.bids.length}`;
+  const fresh = key !== claimKey;
+  claimKey = key;
+  if (!last) {
+    const opener = game.turn === HUMAN ? "Your lead" : `${name(state, game.turn)} to open`;
     return h(
       "div",
-      { class: "controls waiting" },
-      h("span", { class: "wait-text" }, state.flash),
-      button("Show cards", () => actions.skipThinking(), { class: "skip", key: "skip" }),
+      { class: `claim${fresh ? " fresh" : ""}`, role: "status" },
+      h("span", { class: "claim-who" }, `Round ${game.round}`),
+      h("span", { class: "claim-bid quiet" }, opener),
+      h("span", { class: "claim-pool" }, `${pool} cards on the table`),
     );
   }
-  if (game.phase === "bidding" && game.turn === HUMAN) {
-    return h("div", { class: "controls" }, bidPicker(state, game, actions));
-  }
-  const name = state.seats[game.turn]?.name ?? "CPU";
+  const cards = claimCards(last.bid);
+  const who = last.player === HUMAN ? "You claim" : `${name(state, last.player)} claims`;
   return h(
     "div",
-    { class: "controls waiting" },
-    h("span", { class: "wait-text" }, h("span", { class: "dots", "aria-hidden": "true" }, "•••"), ` ${name} is thinking`),
-    button("Skip", () => actions.skipThinking(), { class: "skip", key: "skip" }),
+    { class: `claim${fresh ? " fresh" : ""}`, role: "status", "aria-live": "polite" },
+    h("span", { class: "claim-who" }, who),
+    h(
+      "div",
+      { class: "claim-cards", "aria-hidden": "true" },
+      cards.map((c, i) => {
+        const { rot, dy } = fan(i, cards.length);
+        return cardEl(c, { width: 38, cls: "mini", style: `transform:rotate(${rot}deg) translateY(${dy}px)` });
+      }),
+    ),
+    h("span", { class: "claim-bid" }, bidLabel(last.bid)),
+    h("span", { class: "claim-pool" }, `${pool} cards on the table`),
   );
 }
 
-function logPanel(state: AppState): HTMLElement {
-  const entries = state.log.slice(-12);
-  return h(
-    "aside",
-    { class: "log", "aria-label": "Game log" },
-    h("h3", null, "Log"),
-    entries.length === 0
-      ? h("div", { class: "entry" }, "The table is quiet…")
-      : entries.map((e) => h("div", { class: `entry ${e.kind}` }, `R${e.round} · ${e.text}`)),
-  );
-}
-
-export function gameScreen(state: AppState, game: GameState, actions: Actions): HTMLElement {
+function handEl(game: GameState, deal: boolean, yourTurn: boolean, short: boolean): HTMLElement {
   const me = game.players[HUMAN];
   const hand = me?.hand ?? [];
-  const animate = dealtRound !== game.round || dealtGame === null;
-  if (animate) {
-    dealtRound = game.round;
-    dealtGame = game;
+  const w = short ? 74 : 94;
+  const n = hand.length;
+  const step = fanStep(n, w, 360, w * 0.78);
+  const out = me?.eliminated ?? false;
+  const label = out
+    ? "You're out, watching"
+    : yourTurn
+      ? `Your move · ${n} card${n === 1 ? "" : "s"}`
+      : `Your hand · ${n}`;
+  return h(
+    "div",
+    { class: "hand-area" },
+    h("div", { class: `hand-label${yourTurn ? " your-turn" : ""}` }, label),
+    h(
+      "div",
+      { class: "hand", "aria-label": "Your hand", style: `--hw:${w}px` },
+      hand.map((c, i) => {
+        const { rot, dy } = fan(i, n, n <= 2 ? 13 : 7, 2);
+        const x = (i - (n - 1) / 2) * step;
+        const delay = deal ? `animation-delay:${150 + i * 90}ms;` : "";
+        const style = `--x:${x.toFixed(1)}px;--rot:${rot}deg;--dy:${dy}px;${delay}`;
+        return cardEl(c, { width: w, cls: `in-hand${deal ? " deal" : ""}`, style, ribbon: true });
+      }),
+    ),
+  );
+}
+
+function waitingHud(state: AppState, game: GameState, actions: Actions): HTMLElement {
+  if (state.flash) {
+    return h(
+      "div",
+      { class: "hud hud-wait" },
+      button("Show cards", () => actions.skipThinking(), { class: "brush parchment", key: "skip" }),
+    );
   }
-  const bots = state.seats.filter((s) => !s.human);
-  const pool = poolOf(game).length;
+  return h(
+    "div",
+    { class: "hud hud-wait" },
+    h(
+      "span",
+      { class: "wait-text", role: "status" },
+      `${name(state, game.turn)} is thinking`,
+      h("span", { class: "think-dots", "aria-hidden": "true" }, h("i"), h("i"), h("i")),
+    ),
+    button("Hurry them along", () => actions.skipThinking(), { class: "text-btn", key: "skip" }),
+  );
+}
+
+function quitConfirm(actions: Actions): HTMLElement {
+  return h(
+    "div",
+    { class: "sheet-layer" },
+    h("div", { class: "sheet-scrim", onclick: () => actions.confirmQuit(false) }),
+    h(
+      "section",
+      { class: "sheet quit-sheet", role: "dialog", "aria-modal": "true", "aria-label": "Leave the table?" },
+      h("h2", null, "Leave the table?"),
+      h("p", null, "This game will be lost. Your settings are kept."),
+      h(
+        "div",
+        { class: "hud-row" },
+        button("Stay", () => actions.confirmQuit(false), { class: "text-btn", key: "quit-no" }),
+        button("Leave", () => actions.changeSettings(), { class: "brush blood", key: "quit-yes" }),
+      ),
+    ),
+  );
+}
+
+export function gameScreen(state: AppState, game: GameState, actions: Actions, short: boolean): HTMLElement {
+  const newGame = seenGame === null || game.round < seenGame.round || game.players.length !== seenGame.players.length;
+  const dkey = `${game.round}:${game.players.map((p) => p.hand.map((c) => c.id).join(",")).join("|")}`;
+  const deal = dkey !== dealtKey;
+  dealtKey = dkey;
+  seenGame = game;
+
+  const yourTurn = game.phase === "bidding" && game.turn === HUMAN && !state.flash;
+  if (!yourTurn && getLocal().sheet) resetLocal({ sheet: false });
+
+  const { scene } = sceneEl({
+    state,
+    game,
+    mode: "turn",
+    dealBacks: deal,
+    enterFigures: newGame,
+    figure: (seat) => {
+      const p = game.players[seat.id];
+      const out = p?.eliminated ?? false;
+      const active = game.phase === "bidding" && game.turn === seat.id && !out;
+      return {
+        mood: "neutral",
+        active,
+        thinking: active && state.thinking === seat.id,
+        out,
+        label: out ? `${seat.name} · out` : `${seat.name} · ${p?.cardCount ?? 0}`,
+      };
+    },
+  });
+  scene.appendChild(claimBlock(state, game));
 
   return h(
     "main",
     { class: "screen game" },
-    h(
-      "header",
-      { class: "game-header" },
-      button("?", () => actions.toggleHelp(true), { class: "help-btn", key: "help", ariaLabel: "How to play" }),
-      h(
-        "div",
-        { class: "title-small" },
-        h("h1", null, "BS Poker"),
-        h("div", { class: "sub" }, `Round ${game.round} · ${pool} cards in play`),
-        h("div", { class: "settings-summary", title: "Settings for this game" }, settingsSummary(state.settings)),
-      ),
-      button("Quit", () => actions.confirmQuit(true), {
-        class: `ghost small${state.confirmQuit ? " selected" : ""}`,
-        key: "quit",
-        ariaLabel: "Quit game",
-        pressed: state.confirmQuit,
-      }),
-      state.confirmQuit
-        ? h(
-            "div",
-            { class: "quit-confirm", role: "group", "aria-label": "Quit game?" },
-            h("span", { class: "quit-q" }, "Quit game?"),
-            button("Yes", () => actions.changeSettings(), { class: "bs small", key: "quit-yes" }),
-            button("No", () => actions.confirmQuit(false), { class: "small", key: "quit-no" }),
-            button("Change settings", () => actions.changeSettings(), { class: "ghost small", key: "quit-settings" }),
-          )
-        : null,
-    ),
-    h(
-      "div",
-      { class: "table-area" },
-      h(
-        "div",
-        { class: "opponents" },
-        bots.map((seat, i) => opponentEl(seat, game, state, opponentPosition(i, bots.length))),
-      ),
-      h("div", { class: "table" }, plaque(state, game)),
-      h(
-        "div",
-        { class: "player" },
-        h(
-          "div",
-          { class: `label${game.phase === "bidding" && game.turn === HUMAN ? " your-turn" : ""}` },
-          avatarEl(state.seats[HUMAN] ?? { id: 0, name: "You", critter: "😎", hue: 46, human: true }, "sm"),
-          h("b", null, "You"),
-          h("span", { class: "count" }, `${me?.cardCount ?? 0} card${me?.cardCount === 1 ? "" : "s"}`),
-        ),
-        h(
-          "div",
-          { class: `hand${hand.length > 5 ? " crowded" : ""}`, "aria-label": "Your hand" },
-          hand.map((c, i) => cardEl(c, animate ? { deal: i } : {})),
-        ),
-      ),
-    ),
-    historyStrip(state, game),
-    controls(state, game, actions),
-    logPanel(state),
+    backdropEl("turn"),
+    scene,
+    state.flash ? h("div", { class: "flash-banner", role: "alert" }, h("span", null, state.flash)) : null,
+    historyFeed(state, game),
+    handEl(game, deal, yourTurn, short),
+    yourTurn ? bidHud(state, game, actions) : waitingHud(state, game, actions),
+    headerEl(game, actions, null, true),
+    yourTurn ? changeHandSheet(state, game, actions) : null,
+    state.confirmQuit ? quitConfirm(actions) : null,
   );
 }

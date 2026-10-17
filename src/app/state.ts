@@ -27,14 +27,17 @@ export function settingsSummary(s: Settings): string {
   return `${s.bots} bot${s.bots === 1 ? "" : "s"} · ${diff} · cap ${s.cardCap}`;
 }
 
+/** The painted characters a bot can be drawn as. */
+export type Portrait = "cipher" | "vega" | "onyx";
+
 /** Who sits where. Seat 0 is always the human. */
 export interface Seat {
   readonly id: number;
   readonly name: string;
-  /** Emoji animal for the offline avatar. */
-  readonly critter: string;
-  /** Hue (deg) for the avatar's gradient ring. */
-  readonly hue: number;
+  /** Painted character for a bot; null for the human. */
+  readonly portrait: Portrait | null;
+  /** 0 = the character's own look; 1 = alternate look for a 4th/5th bot reusing a portrait. */
+  readonly variant: 0 | 1;
   readonly human: boolean;
 }
 

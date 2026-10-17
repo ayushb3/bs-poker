@@ -41,6 +41,10 @@ export interface Actions {
   pickRank(rank: Rank): void;
   pickRank2(rank2: Rank): void;
   pickSuit(suit: Suit): void;
+  /** Select an exact bid (ignored unless it is a legal raise right now). */
+  pickBid(bid: Bid): void;
+  /** Step the selection to the next dearer (+1) or cheaper (-1) legal raise. */
+  stepBid(dir: 1 | -1): void;
   confirmBid(): void;
   callBS(): void;
   skipThinking(): void;
@@ -215,6 +219,18 @@ export function createApp(rng: Rng = Math.random, store: SettingsStore = NO_STOR
     },
     pickSuit(suit) {
       set({ picker: picker.pickSuit(state.picker, suit) });
+    },
+    pickBid(bid) {
+      const g = state.game;
+      if (!g) return;
+      const legal = picker.findLegal(legalActions(g).bids, bid);
+      if (legal) set({ picker: picker.pickerFromBid(legal) });
+    },
+    stepBid(dir) {
+      const g = state.game;
+      if (!g || g.phase !== "bidding" || g.turn !== HUMAN) return;
+      const next = picker.stepBid(legalActions(g).bids, state.picker, dir);
+      if (next) set({ picker: picker.pickerFromBid(next) });
     },
     confirmBid() {
       const g = state.game;

@@ -34,3 +34,22 @@ export function revealText(game: GameState, r: RoundResult, who: PlayerRef): Rev
 export function standings(game: GameState): GameState["players"] {
   return [...game.players].sort((a, b) => Number(a.eliminated) - Number(b.eliminated) || a.cardCount - b.cardCount);
 }
+
+/** How a seat's figure reacts on the reveal: the winner of the call looks smug, the loser caught. */
+export type Mood = "neutral" | "smug" | "caught";
+
+export function revealMood(r: RoundResult, seat: number): Mood {
+  if (seat === r.loser) return "caught";
+  const winner = r.loser === r.bidder ? r.caller : r.bidder;
+  return seat === winner ? "smug" : "neutral";
+}
+
+/** Short outcome for the reveal footer: "You take a card." + "Now holding 3." */
+export function outcomeText(game: GameState, r: RoundResult, who: PlayerRef): { take: string; holding: string } {
+  const you = r.loser === who.human;
+  const n = game.players[r.loser]?.cardCount ?? 0;
+  return {
+    take: `${who.name(r.loser)} ${you ? "take" : "takes"} a card.`,
+    holding: game.players[r.loser]?.eliminated ? `That's ${n}: ${you ? "you're" : "they're"} out.` : `Now holding ${n}.`,
+  };
+}
