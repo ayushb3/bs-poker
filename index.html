@@ -4,13 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
-    <meta name="description" content="BS Poker — a bluffing/poker hybrid card game invented by Samarth. Play against CPU bots in your browser." />
+    <meta name="theme-color" content="#0b0705" />
+    <meta name="description" content="BS Poker — a bluffing/poker hybrid card game invented by Samarth. Take a seat in a candlelit saloon against CPU opponents." />
     <title>BS Poker</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231a5d3a'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-weight='900' font-size='32' fill='%23d4af37' text-anchor='middle'%3EBS%3C/text%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b0705'/%3E%3Ctext x='32' y='44' font-family='Georgia,serif' font-weight='900' font-size='30' fill='%23ece3cf' text-anchor='middle'%3EBS%3C/text%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rye&family=Alegreya+Sans+SC:wght@500;700;800&family=Alegreya+Sans:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div id="app"></div>
-    <div id="embers" aria-hidden="true"></div>
+    <div id="desk" aria-hidden="true"></div>
+    <div id="stage">
+      <div id="app"></div>
+      <svg class="grain" aria-hidden="true" preserveAspectRatio="none">
+        <filter id="grain-f"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" /><feColorMatrix type="saturate" values="0" /></filter>
+        <rect width="100%" height="100%" filter="url(#grain-f)" />
+      </svg>
+      <div class="vignette" aria-hidden="true"></div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
