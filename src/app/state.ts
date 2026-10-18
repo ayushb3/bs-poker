@@ -12,9 +12,14 @@ export interface Settings {
   readonly difficulty: Difficulty;
   /** Card cap, 4..8 (default 6). */
   readonly cardCap: number;
+  /** How long bots "think" before acting. */
+  readonly botSpeed: BotSpeed;
 }
 
-export const DEFAULT_SETTINGS: Settings = { bots: 3, difficulty: "medium", cardCap: 6 };
+export type BotSpeed = "slow" | "normal" | "fast" | "instant";
+export const BOT_SPEEDS: readonly BotSpeed[] = ["slow", "normal", "fast", "instant"];
+
+export const DEFAULT_SETTINGS: Settings = { bots: 3, difficulty: "medium", cardCap: 6, botSpeed: "normal" };
 export const MIN_BOTS = 1;
 export const MAX_BOTS = 5;
 export const MIN_CAP = 4;

@@ -24,7 +24,7 @@ function possessive(name: string): string {
 }
 
 function revealCard(card: Card, w: number, witness: boolean, flip: boolean, order: number, extra: string): HTMLElement {
-  const delay = flip ? `animation-delay:${200 + order * 70}ms;` : "";
+  const delay = flip ? `animation-delay:calc(${200 + order * 70}ms * var(--anim, 1));` : "";
   return cardEl(card, {
     width: w,
     cls: `${witness ? "witness" : "dim"}${flip ? " flip" : ""}`,

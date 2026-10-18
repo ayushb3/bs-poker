@@ -87,7 +87,7 @@ describe("controller: odds line and rematch", () => {
     app.actions.rematch();
     const s = app.getState();
     expect(s.screen).toBe("game");
-    expect(s.settings).toEqual({ bots: 2, cardCap: 4, difficulty: "hard" });
+    expect(s.settings).toEqual({ bots: 2, cardCap: 4, difficulty: "hard", botSpeed: "normal" });
     expect(s.seats).toBe(seats);
     expect(s.odds).toBeNull();
     expect(s.flash).toBeNull();

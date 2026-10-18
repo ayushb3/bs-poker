@@ -1,7 +1,7 @@
 /** Title: the painting, the wordmark, ‹ value › settings rows and "Take a seat". */
 import type { Actions } from "../app/controller";
 import type { AppState } from "../app/state";
-import { MAX_BOTS, MAX_CAP, MIN_BOTS, MIN_CAP } from "../app/state";
+import { BOT_SPEEDS, MAX_BOTS, MAX_CAP, MIN_BOTS, MIN_CAP } from "../app/state";
 import { DIFFICULTIES } from "../cpu";
 import { backdropEl } from "./scene";
 import { h, button } from "./dom";
@@ -34,6 +34,7 @@ function stepperRow(s: Stepper): HTMLElement {
 export function titleScreen(state: AppState, actions: Actions): HTMLElement {
   const s = state.settings;
   const di = DIFFICULTIES.indexOf(s.difficulty);
+  const si = BOT_SPEEDS.indexOf(s.botSpeed);
   const cap = (d: string): string => d[0]!.toUpperCase() + d.slice(1);
   const rows: Stepper[] = [
     {
@@ -62,6 +63,15 @@ export function titleScreen(state: AppState, actions: Actions): HTMLElement {
       key: "cap",
       onPrev: s.cardCap > MIN_CAP ? () => actions.setSettings({ cardCap: s.cardCap - 1 }) : null,
       onNext: s.cardCap < MAX_CAP ? () => actions.setSettings({ cardCap: s.cardCap + 1 }) : null,
+    },
+    {
+      label: "Bot speed",
+      value: cap(s.botSpeed),
+      prev: "Slower bots",
+      next: "Faster bots",
+      key: "speed",
+      onPrev: si > 0 ? () => actions.setSettings({ botSpeed: BOT_SPEEDS[si - 1]! }) : null,
+      onNext: si < BOT_SPEEDS.length - 1 ? () => actions.setSettings({ botSpeed: BOT_SPEEDS[si + 1]! }) : null,
     },
   ];
   return h(

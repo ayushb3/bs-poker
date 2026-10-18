@@ -7,6 +7,7 @@ import { overScreen } from "./over";
 import { revealScreen } from "./reveal";
 import { titleScreen } from "./title";
 import { onLocalChange } from "./local";
+import { botTiming } from "../app/settings";
 
 function screenFor(state: AppState, app: App, short: boolean): HTMLElement {
   const { actions } = app;
@@ -34,6 +35,8 @@ export function mountRenderer(root: HTMLElement, stage: HTMLElement, app: App): 
     if (state.showHelp) frag.appendChild(helpPanel(() => app.actions.toggleHelp(false)));
     root.replaceChildren(frag);
     root.dataset["screen"] = state.screen;
+    // Fast and Instant bots also shorten the deal and flip animations (see --anim in style.css).
+    root.style.setProperty("--anim", String(botTiming(state.settings.botSpeed).anim));
 
     if (state.showHelp) {
       root.querySelector<HTMLElement>('[data-key="help-close"]')?.focus({ preventScroll: true });

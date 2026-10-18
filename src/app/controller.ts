@@ -8,19 +8,13 @@ import type { CpuContext, CpuDecision } from "../cpu";
 import { cpuDecide } from "../cpu";
 import type { AppState, LogEntry, Opener, Seat, Settings } from "./state";
 import { EMPTY_PICKER, INITIAL_STATE } from "./state";
-import { validateSettings } from "./settings";
+import { botTiming, validateSettings } from "./settings";
 import { makeSeats } from "./roster";
 import * as picker from "./picker";
 import { computeRevealOdds } from "./odds";
 import { NO_STORE, type SettingsStore } from "./persist";
 
 export const HUMAN = 0;
-
-/** CPU "thinking" delay window (ms); the human can skip it. */
-const THINK_MIN_MS = 700;
-const THINK_MAX_MS = 1200;
-/** How long the "X calls BS!" banner shows before the reveal screen. */
-const BS_FLASH_MS = 900;
 
 export interface App {
   readonly getState: () => AppState;
@@ -52,7 +46,7 @@ export interface Actions {
 }
 
 export function createApp(rng: Rng = Math.random, store: SettingsStore = NO_STORE): App {
-  let state: AppState = { ...INITIAL_STATE, settings: { ...INITIAL_STATE.settings, ...(store.load() ?? {}) } };
+  let state: AppState = { ...INITIAL_STATE, settings: validateSettings(INITIAL_STATE.settings, store.load() ?? {}) };
   const listeners = new Set<(s: AppState) => void>();
   let thinkTimer: ReturnType<typeof setTimeout> | null = null;
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -115,7 +109,8 @@ export function createApp(rng: Rng = Math.random, store: SettingsStore = NO_STOR
     // Decide now (so "skip" is instant), reveal after a short human-readable delay.
     const decision = cpuDecide(ctx, state.settings.difficulty);
     pending = { seat, decision };
-    const delay = THINK_MIN_MS + rng() * (THINK_MAX_MS - THINK_MIN_MS);
+    const t = botTiming(state.settings.botSpeed);
+    const delay = t.thinkMinMs + rng() * (t.thinkMaxMs - t.thinkMinMs);
     thinkTimer = setTimeout(applyPending, delay);
   }
 
@@ -168,7 +163,7 @@ export function createApp(rng: Rng = Math.random, store: SettingsStore = NO_STOR
     flashTimer = setTimeout(() => {
       flashTimer = null;
       set({ flash: null, screen: "reveal" });
-    }, BS_FLASH_MS);
+    }, botTiming(state.settings.botSpeed).bsFlashMs);
   }
 
   function begin(seats: readonly Seat[]): void {
