@@ -6,13 +6,16 @@ import type { Card } from "../engine";
 import type { Portrait } from "../app/state";
 import type { Mood } from "../app/reveal";
 
-import cipherCandle from "../../assets/art/cipher_candle.webp";
+import cipherDark from "../../assets/art/cipher_silhouettes.webp";
+import cipherNeutral from "../../assets/art/cipher_opponents.webp";
 import cipherSmug from "../../assets/art/cipher_smug.webp";
 import cipherCaught from "../../assets/art/cipher_caught.webp";
-import vegaCandle from "../../assets/art/vega_candle.webp";
+import vegaDark from "../../assets/art/vega_silhouettes.webp";
+import vegaNeutral from "../../assets/art/vega_opponents.webp";
 import vegaSmug from "../../assets/art/vega_smug.webp";
 import vegaCaught from "../../assets/art/vega_caught.webp";
-import onyxCandle from "../../assets/art/onyx_candle.webp";
+import onyxDark from "../../assets/art/onyx_silhouettes.webp";
+import onyxNeutral from "../../assets/art/onyx_opponents.webp";
 import onyxSmug from "../../assets/art/onyx_smug.webp";
 import onyxCaught from "../../assets/art/onyx_caught.webp";
 import titleArt from "../../assets/art/title.webp";
@@ -22,14 +25,17 @@ import candlestick from "../../assets/props/candlestick.webp";
 import railTexture from "../../assets/textures/rail.webp";
 
 /**
- * Portrait x mood -> image. The seated, neutral pose is the candlelit art;
- * smug/caught are the painted reaction shots until candlelit versions land
- * (swap a file name here and nothing else changes).
+ * Portrait x look -> image. During turns everyone is a backlit silhouette
+ * ("dark"); on the reveal the room lights up and each figure cross-fades to
+ * the bright painted art for its mood. All four come from one framing, so
+ * they line up when stacked (swap a file name here and nothing else changes).
  */
-export const PORTRAIT_ART: Record<Portrait, Record<Mood, string>> = {
-  cipher: { neutral: cipherCandle, smug: cipherSmug, caught: cipherCaught },
-  vega: { neutral: vegaCandle, smug: vegaSmug, caught: vegaCaught },
-  onyx: { neutral: onyxCandle, smug: onyxSmug, caught: onyxCaught },
+export type Look = "dark" | Mood;
+
+export const PORTRAIT_ART: Record<Portrait, Record<Look, string>> = {
+  cipher: { dark: cipherDark, neutral: cipherNeutral, smug: cipherSmug, caught: cipherCaught },
+  vega: { dark: vegaDark, neutral: vegaNeutral, smug: vegaSmug, caught: vegaCaught },
+  onyx: { dark: onyxDark, neutral: onyxNeutral, smug: onyxSmug, caught: onyxCaught },
 };
 
 export const ART = { title: titleArt, wall: wallArt, cardBack, candlestick, rail: railTexture } as const;
@@ -47,7 +53,7 @@ export function faceUrl(card: Card): string | null {
   return FACES[`../../assets/cards/${rank}_of_${SUIT_FILE[card.suit]}.webp`] ?? null;
 }
 
-/** Warm the cache for the reaction art so the reveal swap never flashes empty. */
+/** Warm the cache for every look so the reveal cross-fade never flashes empty. */
 export function preloadArt(): void {
   for (const moods of Object.values(PORTRAIT_ART)) {
     for (const url of Object.values(moods)) {

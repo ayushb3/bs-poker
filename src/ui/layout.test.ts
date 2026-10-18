@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { STAGE_W, railTopAt, seatSpots } from "./layout";
 
-const FIG_RATIO = 745 / 520; // tallest portrait
+const FIG_RATIO = 748 / 520; // tallest portrait (onyx_smug)
 
 describe("seatSpots", () => {
   for (let n = 1; n <= 5; n++) {

@@ -10,7 +10,7 @@ import { HUMAN } from "../app/controller";
 import type { AppState } from "../app/state";
 import { outcomeText, revealMood, revealText } from "../app/reveal";
 import { shortOdds } from "../app/odds";
-import { backdropEl, sceneEl } from "./scene";
+import { backdropEl, lightAge, sceneEl } from "./scene";
 import { cardEl, fan } from "./cards";
 import { h, button } from "./dom";
 import { fanStep } from "./layout";
@@ -48,6 +48,7 @@ export function revealScreen(state: AppState, game: GameState, actions: Actions,
   const key = `${game.round}:${r.bidder}:${r.caller}:${r.pool.length}`;
   const flip = key !== flippedKey;
   flippedKey = key;
+  const light = lightAge("reveal", flip);
 
   const { scene, spots } = sceneEl({
     state,
@@ -55,6 +56,7 @@ export function revealScreen(state: AppState, game: GameState, actions: Actions,
     mode: "reveal",
     dealBacks: false,
     enterFigures: false,
+    lightAge: light,
     figure: (seat) => {
       const p = game.players[seat.id];
       const wasIn = (p?.hand.length ?? 0) > 0;
@@ -140,7 +142,7 @@ export function revealScreen(state: AppState, game: GameState, actions: Actions,
   return h(
     "main",
     { class: "screen reveal" },
-    backdropEl("reveal"),
+    backdropEl("reveal", light),
     scene,
     yourHand,
     h(

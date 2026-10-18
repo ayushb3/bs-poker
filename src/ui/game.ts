@@ -4,7 +4,7 @@ import { bidLabel, poolOf } from "../engine";
 import type { Actions } from "../app/controller";
 import { HUMAN } from "../app/controller";
 import type { AppState, Opener } from "../app/state";
-import { backdropEl, sceneEl } from "./scene";
+import { backdropEl, lightAge, sceneEl } from "./scene";
 import { cardEl, claimCards, fan } from "./cards";
 import { h, button } from "./dom";
 import { bidHud, changeHandSheet } from "./picker";
@@ -180,6 +180,8 @@ export function gameScreen(state: AppState, game: GameState, actions: Actions, s
   const dkey = `${game.round}:${game.players.map((p) => p.hand.map((c) => c.id).join(",")).join("|")}`;
   const deal = dkey !== dealtKey;
   dealtKey = dkey;
+  // The first deal after a reveal fades the room back down to silhouettes.
+  const light = lightAge("turn", deal && !newGame && game.round > 1);
   seenGame = game;
 
   const yourTurn = game.phase === "bidding" && game.turn === HUMAN && !state.flash;
@@ -191,6 +193,7 @@ export function gameScreen(state: AppState, game: GameState, actions: Actions, s
     mode: "turn",
     dealBacks: deal,
     enterFigures: newGame,
+    lightAge: light,
     figure: (seat) => {
       const p = game.players[seat.id];
       const out = p?.eliminated ?? false;
@@ -209,7 +212,7 @@ export function gameScreen(state: AppState, game: GameState, actions: Actions, s
   return h(
     "main",
     { class: "screen game" },
-    backdropEl("turn"),
+    backdropEl("turn", light),
     scene,
     state.flash ? h("div", { class: "flash-banner", role: "alert" }, h("span", null, state.flash)) : null,
     historyFeed(state, game),
