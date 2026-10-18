@@ -103,6 +103,11 @@ button:focus-visible {
   pointer-events: none;
   z-index: 21;
   background: radial-gradient(ellipse 85% 75% at 50% 45%, rgba(0, 0, 0, 0) 55%, rgba(0, 0, 0, 0.7) 100%);
+  transition: opacity 0.9s ease;
+}
+/* The room lights up on the reveal: the vignette eases off, then closes back in on the next round. */
+#app[data-screen="reveal"] ~ .vignette {
+  opacity: 0.5;
 }
 
 /* ---------- backdrop ---------- */
@@ -123,7 +128,12 @@ button:focus-visible {
 }
 .backdrop-reveal .bd-img {
   filter: blur(1.5px) brightness(0.6) saturate(0.85);
-  animation: lampUp 0.9s ease-out both;
+}
+.backdrop-reveal.light-change .bd-img {
+  animation: lampUp 0.9s ease-out var(--light-age, 0ms) both;
+}
+.backdrop-turn.light-change .bd-img {
+  animation: lampDown 0.7s ease-in-out var(--light-age, 0ms) both;
 }
 .backdrop-title .bd-img {
   inset: 0;
@@ -135,10 +145,18 @@ button:focus-visible {
 .bd-warm {
   position: absolute;
   inset: 0;
+  transform-origin: 50% 30%;
   background: radial-gradient(ellipse 70% 40% at 50% calc(30% + var(--off, 0px)), rgba(255, 150, 70, 0.1) 0%, rgba(0, 0, 0, 0) 70%);
 }
 .backdrop-reveal .bd-warm {
-  background: radial-gradient(ellipse 70% 40% at 50% 30%, rgba(255, 178, 96, 0.18) 0%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(ellipse 70% 40% at 50% 30%, rgba(255, 178, 96, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+  transform: scale(1.5);
+}
+.backdrop-reveal.light-change .bd-warm {
+  animation: warmUp 0.9s ease-out var(--light-age, 0ms) both;
+}
+.backdrop-turn.light-change .bd-warm {
+  animation: warmDown 0.7s ease-in-out var(--light-age, 0ms) both;
 }
 .backdrop-title .bd-warm {
   background: linear-gradient(180deg, rgba(5, 3, 2, 0.55) 0%, rgba(5, 3, 2, 0) 26%);
@@ -147,6 +165,22 @@ button:focus-visible {
 @keyframes lampUp {
   from {
     filter: blur(1.5px) brightness(0.32) saturate(0.85);
+  }
+}
+@keyframes lampDown {
+  from {
+    filter: blur(1.5px) brightness(0.6) saturate(0.85);
+  }
+}
+@keyframes warmUp {
+  from {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+}
+@keyframes warmDown {
+  from {
+    transform: scale(1.5);
   }
 }
 
@@ -260,10 +294,55 @@ button:focus-visible {
   white-space: nowrap;
   transition: color 0.4s;
 }
+/* Silhouette and bright art stacked in one cell, bottom-aligned, so they cross-fade in place. */
+.fig-stack {
+  display: grid;
+  width: 100%;
+  margin-top: 2px;
+}
+.fig-stack > .fig-art {
+  grid-area: 1 / 1;
+  align-self: end;
+}
+.light-lit > .fig-dark,
+.light-dark > .fig-lit {
+  opacity: 0;
+}
+.figure.light-change .light-lit > .fig-lit {
+  animation: litIn 0.6s ease-in-out both;
+}
+.figure.light-change .light-lit > .fig-dark,
+.figure.light-change .light-dark > .fig-lit {
+  animation: litOut 0.6s ease-in-out both;
+}
+@keyframes litIn {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes litOut {
+  from {
+    opacity: 1;
+  }
+}
+/* A faint warm backlight behind each seat so the silhouettes read against the dark wall. */
+.scene-turn .figure::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -12%;
+  right: -12%;
+  top: 4%;
+  height: 70%;
+  background: radial-gradient(ellipse 50% 50% at 50% 45%, rgba(255, 150, 70, 0.16) 0%, rgba(255, 120, 50, 0.05) 55%, rgba(0, 0, 0, 0) 75%);
+  pointer-events: none;
+}
+.scene-turn .figure.out::before {
+  display: none;
+}
 .fig-art {
   display: block;
   width: 100%;
-  margin-top: 2px;
   -webkit-mask-image: linear-gradient(180deg, #000 90%, rgba(0, 0, 0, 0.2) 100%);
   mask-image: linear-gradient(180deg, #000 90%, rgba(0, 0, 0, 0.2) 100%);
   filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.6));
@@ -290,9 +369,13 @@ button:focus-visible {
 .figure.out .fig-label {
   color: var(--ink-muted);
 }
+/* Out of the game during turns: a faded grey outline, still findable at its seat. */
+.scene-turn .figure.out .fig-dark {
+  filter: grayscale(1) brightness(0.9);
+  opacity: 0.4;
+}
 .scene-reveal .fig-art {
   filter: sepia(0.15) brightness(0.9) contrast(1.05) drop-shadow(0 -1px 2px rgba(255, 180, 104, 0.35)) drop-shadow(0 14px 16px rgba(0, 0, 0, 0.6));
-  animation: moodIn 0.5s ease-out both;
 }
 .scene-reveal .figure.alt .fig-art {
   filter: sepia(0.4) hue-rotate(-12deg) saturate(0.75) brightness(0.85) drop-shadow(0 14px 16px rgba(0, 0, 0, 0.6));
@@ -307,11 +390,6 @@ button:focus-visible {
   from {
     opacity: 0;
     transform: translateY(calc(-100% + 18px));
-  }
-}
-@keyframes moodIn {
-  from {
-    opacity: 0.4;
   }
 }
 
@@ -401,7 +479,15 @@ button:focus-visible {
   animation: glow 3.2s ease-in-out infinite alternate;
 }
 .scene-reveal .candle-glow {
-  opacity: 0.7;
+  transform: scale(1.5);
+}
+.scene-reveal.light-change .candle-glow {
+  animation: glow 3.2s ease-in-out infinite alternate, glowWiden 0.9s ease-out var(--light-age, 0ms) both;
+}
+@keyframes glowWiden {
+  from {
+    transform: scale(1);
+  }
 }
 .candle {
   position: absolute;
@@ -724,6 +810,13 @@ button:focus-visible {
   padding: 6px 34px 8px;
   clip-path: var(--brush-banner);
   animation: stamp 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) 0.15s both;
+}
+/* On a fresh reveal the light comes up first; the verdict lands once the room has settled. */
+.scene-reveal.light-change .verdict-banner {
+  animation-delay: calc(1s + var(--light-age, 0ms));
+}
+.scene-reveal.light-change .verdict > :not(.verdict-banner) {
+  animation: fadeIn 0.4s ease-out calc(1.15s + var(--light-age, 0ms)) both;
 }
 .verdict-banner.there {
   background: var(--blood);

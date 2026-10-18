@@ -9,9 +9,7 @@ dist/
 
 # Art sources and unused renders (keep the repo lean; only the files the UI imports are committed)
 assets/art/src/
-assets/art/*_silhouettes.webp
 assets/art/*_woodcut.webp
 assets/art/*_moon.webp
-assets/art/*_opponents.webp
 assets/props/*.png
 assets/textures/*.jpg
