@@ -6,6 +6,8 @@ Play it against 1–5 CPU opponents in the browser: take a seat at a candlelit s
 
 > Patent pending 😉
 
+▶️ **Play it now:** https://ayushb3.github.io/bs-poker/
+
 📜 **Rules v0.3 and the design rationale:** [docs/SPEC.md](./docs/SPEC.md) (the source of truth). [RULES.md](./RULES.md) is the older v0.2 write-up, kept for history.
 
 ## Run it
@@ -22,7 +24,7 @@ npm run typecheck # tsc --noEmit
 npm run sim       # CPU self-play: win rates and bids per round, printed
 ```
 
-`dist/` is plain static files with a relative base path, so it can be dropped onto any static host (GitHub Pages, Netlify, an S3 bucket, a USB stick).
+`dist/` is plain static files built for the `/bs-poker/` base path (see `vite.config.ts`). Every push to `main` deploys it to GitHub Pages via `.github/workflows/deploy.yml`; to host it somewhere else, change `base` to match the new path.
 
 ## How to play
 

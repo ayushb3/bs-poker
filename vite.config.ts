@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 
-// base is "./" so the built site works from any sub-path (GitHub Pages, etc.).
+// Served from https://ayushb3.github.io/bs-poker/, so assets resolve under /bs-poker/.
 export default defineConfig({
-  base: "./",
+  base: "/bs-poker/",
   build: { outDir: "dist", target: "es2022" },
 });
