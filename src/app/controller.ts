@@ -2,10 +2,9 @@
  * The app controller: owns the single AppState, drives the engine, schedules
  * CPU turns, and notifies the renderer. No DOM in here.
  */
-import type { Bid, Category, GameState, Rank, Rng, Suit } from "../engine";
-import { applyAction, bidLabel, legalActions, newGame, nextRound, poolOf } from "../engine";
-import type { CpuContext, CpuDecision } from "../cpu";
-import { cpuDecide } from "../cpu";
+import type { Action, Bid, Category, GameState, Rank, Rng, Suit } from "../engine";
+import { applyAction, bidLabel, legalActions, newGame, nextRound } from "../engine";
+import { botAction } from "./cpuTurn";
 import type { AppState, LogEntry, Opener, Seat, Settings } from "./state";
 import { EMPTY_PICKER, INITIAL_STATE } from "./state";
 import { botTiming, validateSettings } from "./settings";
@@ -50,7 +49,7 @@ export function createApp(rng: Rng = Math.random, store: SettingsStore = NO_STOR
   const listeners = new Set<(s: AppState) => void>();
   let thinkTimer: ReturnType<typeof setTimeout> | null = null;
   let flashTimer: ReturnType<typeof setTimeout> | null = null;
-  let pending: { seat: number; decision: CpuDecision } | null = null;
+  let pending: { seat: number; action: Action } | null = null;
 
   function set(patch: Partial<AppState>): void {
     state = { ...state, ...patch };
@@ -94,21 +93,10 @@ export function createApp(rng: Rng = Math.random, store: SettingsStore = NO_STOR
 
   function scheduleCpu(game: GameState): void {
     const seat = game.turn;
-    const me = game.players[seat];
-    if (!me) return;
-    const ctx: CpuContext = {
-      me: seat,
-      hand: me.hand,
-      poolSize: poolOf(game).length,
-      cardCounts: game.players.map((p) => (p.eliminated ? 0 : p.cardCount)),
-      bids: game.bids,
-      legalBids: legalActions(game).bids,
-      config: game.config,
-      rng,
-    };
     // Decide now (so "skip" is instant), reveal after a short human-readable delay.
-    const decision = cpuDecide(ctx, state.settings.difficulty);
-    pending = { seat, decision };
+    const action = botAction(game, seat, state.settings.difficulty, rng);
+    if (!action) return;
+    pending = { seat, action };
     const t = botTiming(state.settings.botSpeed);
     const delay = t.thinkMinMs + rng() * (t.thinkMaxMs - t.thinkMinMs);
     thinkTimer = setTimeout(applyPending, delay);
@@ -121,15 +109,7 @@ export function createApp(rng: Rng = Math.random, store: SettingsStore = NO_STOR
     pending = null;
     const game = state.game;
     if (!p || !game || game.phase !== "bidding" || game.turn !== p.seat) return;
-    let action = p.decision.action;
-    // Defensive: never let a bot stall the table on an illegal action.
-    const legal = legalActions(game);
-    if (action.type === "callBS" && !legal.canCallBS) {
-      const first = legal.bids[0];
-      if (!first) return;
-      action = { type: "bid", bid: first };
-    }
-    performAction(p.seat, action);
+    performAction(p.seat, p.action);
   }
 
   function performAction(seat: number, action: { type: "bid"; bid: Bid } | { type: "callBS" }): void {
