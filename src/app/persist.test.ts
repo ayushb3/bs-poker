@@ -12,7 +12,17 @@ describe("storageSettingsStore", () => {
     const mem = memStorage();
     const store = storageSettingsStore(() => mem);
     store.save({ ...DEFAULT_SETTINGS, bots: 2, difficulty: "easy" });
-    expect(store.load()).toEqual({ bots: 2, difficulty: "easy", cardCap: DEFAULT_SETTINGS.cardCap });
+    expect(store.load()).toEqual({ bots: 2, difficulty: "easy", cardCap: DEFAULT_SETTINGS.cardCap, botSpeed: "normal" });
+  });
+
+  it("round-trips bot speed and fills it in for settings saved before it existed", () => {
+    const mem = memStorage();
+    storageSettingsStore(() => mem).save({ ...DEFAULT_SETTINGS, botSpeed: "instant" });
+    expect(storageSettingsStore(() => mem).load()?.botSpeed).toBe("instant");
+    const old = memStorage({ [SETTINGS_KEY]: JSON.stringify({ bots: 4, difficulty: "hard", cardCap: 5 }) });
+    expect(storageSettingsStore(() => old).load()).toEqual({ bots: 4, difficulty: "hard", cardCap: 5, botSpeed: "normal" });
+    const bad = memStorage({ [SETTINGS_KEY]: JSON.stringify({ ...DEFAULT_SETTINGS, botSpeed: "ludicrous" }) });
+    expect(storageSettingsStore(() => bad).load()?.botSpeed).toBe("normal");
   });
 
   it("ignores corrupt or missing data and storage that throws", () => {

@@ -28,7 +28,7 @@ npm run sim       # CPU self-play: win rates and bids per round, printed
 
 ## How to play
 
-1. On the title screen pick the number of opponents (1–5), the CPU difficulty (easy / medium / hard) and the card cap (4–8, default 6). Press **Play**.
+1. On the title screen pick the number of opponents (1–5), the CPU difficulty (easy / medium / hard), the card cap (4–8, default 6) and the **bot speed** (Slow / Normal / Fast / Instant; Fast and Instant also shorten the deal and flip animations). Press **Take a seat**. **Hurry them along** skips a bot's thinking at any speed.
 2. Round 1 deals everyone 2 cards. A random player opens; after that, the round's loser opens.
 3. On your turn, either **raise** (the picker only ever offers bids strictly above the current one, so you can't make an illegal bid) or press **Call BS!** on the last bid.
 4. When BS is called, all hands are revealed. The cards that make the claimed hand light up in gold, wilds included. If the hand is there, the caller loses; if not, the bidder loses. The loser is dealt one more card from the next round on.

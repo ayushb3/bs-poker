@@ -646,7 +646,7 @@ button:focus-visible {
   transition: translate 0.35s ease, rotate 0.35s ease;
 }
 .card.in-hand.deal {
-  animation: dealIn 0.5s cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation: dealIn calc(0.5s * var(--anim, 1)) cubic-bezier(0.2, 0.8, 0.3, 1) both;
 }
 @keyframes dealIn {
   from {
@@ -680,7 +680,7 @@ button:focus-visible {
   box-shadow: 0 0 0 2px var(--gold), 0 0 14px rgba(255, 200, 110, 0.55), 0 6px 10px rgba(0, 0, 0, 0.7);
 }
 .card.flip {
-  animation: flipIn 0.55s ease-out both;
+  animation: flipIn calc(0.55s * var(--anim, 1)) ease-out both;
 }
 @keyframes flipIn {
   0% {
@@ -692,10 +692,10 @@ button:focus-visible {
   }
 }
 .reveal .card.witness {
-  animation: goldPulse 1.4s ease-out 1.1s both;
+  animation: goldPulse 1.4s ease-out calc(1.1s * var(--anim, 1)) both;
 }
 .reveal .card.witness.flip {
-  animation: flipIn 0.55s ease-out both, goldPulse 1.4s ease-out 1.2s;
+  animation: flipIn calc(0.55s * var(--anim, 1)) ease-out both, goldPulse 1.4s ease-out calc(1.2s * var(--anim, 1));
 }
 @keyframes goldPulse {
   0% {

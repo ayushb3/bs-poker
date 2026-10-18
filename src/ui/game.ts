@@ -126,7 +126,7 @@ function handEl(game: GameState, deal: boolean, yourTurn: boolean, short: boolea
       hand.map((c, i) => {
         const { rot, dy } = fan(i, n, n <= 2 ? 13 : 7, 2);
         const x = (i - (n - 1) / 2) * step;
-        const delay = deal ? `animation-delay:${150 + i * 90}ms;` : "";
+        const delay = deal ? `animation-delay:calc(${150 + i * 90}ms * var(--anim, 1));` : "";
         const style = `--x:${x.toFixed(1)}px;--rot:${rot}deg;--dy:${dy}px;${delay}`;
         return cardEl(c, { width: w, cls: `in-hand${deal ? " deal" : ""}`, style, ribbon: true });
       }),
