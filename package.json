@@ -8,14 +8,22 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
+    "host": "npm run build && tsx server/main.ts",
+    "host:serve": "tsx server/main.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "sim": "vitest run src/cpu/strength.test.ts --silent=false"
   },
   "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/ws": "8.18.2",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vite": "7.3.7",
     "vitest": "4.1.11"
+  },
+  "dependencies": {
+    "ws": "8.22.0"
   }
 }

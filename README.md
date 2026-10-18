@@ -59,10 +59,24 @@ All three levels call BS when their estimate of P(current bid exists) drops belo
 
 In seeded self-play, hard beats easy about 96% of heads-up games and medium about two thirds. The numbers live in `src/cpu/params.ts`.
 
+## Host a table on your Wi-Fi (multiplayer, in progress)
+
+One laptop hosts; everyone else plays from their phone on the same Wi-Fi. There's no account and no internet backend.
+
+```bash
+npm run host      # builds, then serves the game and the table on port 5180
+```
+
+It prints the laptop's addresses, for example `Phones join at: http://192.168.1.20:5180/`. Phones open that link. The laptop itself uses `http://localhost:5180/`. Set `PORT=5181` if 5180 is taken.
+
+- **Windows Firewall:** the first time, Windows asks whether Node.js may accept connections. Allow it on **private networks**, or phones can't connect.
+- **VPNs:** a VPN (Proton, Nord, Tailscale…) can block LAN traffic. If phones can't reach the laptop, allow LAN connections in the VPN or pause it. The host lists VPN addresses last.
+- **Status:** the server, the protocol and server-side bots are in (M3a). The lobby, TV table view and phone controller UI come next (M3b), then reconnects, the turn timer and auto-play (M3c). The GitHub Pages build stays single-player.
+
 ## Project layout
 
 ```
-src/engine/   pure TypeScript rules engine (no DOM); shared by the UI, the bots and a future server
+src/engine/   pure TypeScript rules engine (no DOM); shared by the UI, the bots and the host server
   types.ts      Card, Bid, GameState … the contract
   bids.ts       compare() owns the ladder; allBids(), legalRaises(), bidLabel()
   exists.ts     exists(bid, pool) and explain() (witness cards for the reveal)
@@ -71,7 +85,9 @@ src/engine/   pure TypeScript rules engine (no DOM); shared by the UI, the bots 
   *.test.ts     brute-force oracle for exists(), SPEC table reproduction, game-loop tests
 src/cpu/      easy / medium / hard players behind one decide() policy; self-play sim
 src/app/      app state, controller (drives engine + bots), odds line, picker logic
+src/net/      multiplayer wire protocol shared by the host server and the browser
 src/ui/       vanilla DOM "Saloon" screens: title, table scene (layout.ts seats 1-5 bots), HUD + change-hand sheet, reveal, game over
+server/       `npm run host`: Node http + WebSocket host; room.ts owns the game and sends per-seat views
 assets/       art, card faces, props and textures imported by src/ui/assets.ts (only imported files ship)
 legacy/       the June 2026 prototype (Python CLI + single-file web UI), kept for reference
 docs/         SPEC.md, the simulation scripts behind it, and screenshots
